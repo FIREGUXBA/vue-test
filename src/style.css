@@ -1,0 +1,61 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #F5F5F7;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.3); border-radius: 3px; }
+
+/* --- 核心动画系统 --- */
+
+/* 1. 页面切换 */
+.page-enter-active, .page-leave-active { transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
+.page-enter-from { opacity: 0; transform: translateY(10px) scale(0.98); filter: blur(4px); }
+.page-leave-to { opacity: 0; transform: translateY(-10px) scale(0.98); filter: blur(4px); }
+
+/* 2. 列表筛选动画 (FLIP) */
+.list-move, 
+.list-enter-active, 
+.list-leave-active {
+  transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* 仅进场时交错延迟，避免影响交互 */
+.list-enter-active { transition-delay: calc(var(--i) * 30ms); }
+
+.list-enter-from { opacity: 0; transform: translateY(20px); }
+
+/* 关键：确保离开的元素脱离文档流但位置固定，让后面的元素能平滑移动上来 */
+.list-leave-active { 
+  position: absolute; 
+  left: 0;
+  right: 0;
+  z-index: 0; 
+}
+.list-leave-to { opacity: 0; transform: scale(0.95); }
+
+/* 3. 卡片动画 */
+.card-enter-active { transition: all 0.6s ease-out; }
+.card-enter-from { opacity: 0; transform: translateY(20px); }
+
+/* 4. 进度条 */
+.progress-bar { transition: width 1s ease-out; }
+
+/* 5. Tab 滑块 */
+.tab-bg { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* 6. 防止 Vue 未加载时闪烁 */
+[v-cloak] { display: none; }
+
+/* 7. 动画关键帧 */
+@keyframes fadeInUp {
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+.card-enter-from { opacity: 0; transform: translateY(20px); filter: blur(10px); }
