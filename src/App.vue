@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import StatCard from './components/StatCard.vue'
 import ReportFooterCard from './components/ReportFooterCard.vue'
-import AppleSummaryCard from './components/AppleSummaryCard.vue'
+import SummaryCard from './components/SummaryCard.vue'
 import IconSearch from './components/icons/IconSearch.vue'
 import IconClock from './components/icons/IconClock.vue'
 import IconUsers from './components/icons/IconUsers.vue'
@@ -657,7 +657,7 @@ onUnmounted(() => {
 
           <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5 pb-12">
             
-            <AppleSummaryCard 
+            <SummaryCard 
               title="平均工时" 
               type="single"
               color="green"
@@ -665,7 +665,7 @@ onUnmounted(() => {
               :data="{ value: footerStats.avgAll, unit: '小时', subtitle: '' }" 
             />
 
-            <AppleSummaryCard 
+            <SummaryCard 
               title="工时投入榜" 
               type="list"
               color="blue"
@@ -674,7 +674,7 @@ onUnmounted(() => {
               :data="footerStats.topHours"
             />
 
-            <AppleSummaryCard 
+            <SummaryCard 
               title="工时不足榜" 
               type="list"
               color="orange"
@@ -683,7 +683,7 @@ onUnmounted(() => {
               :data="footerStats.bottomHours"
             />
 
-            <AppleSummaryCard 
+            <SummaryCard 
               title="迟到次数榜" 
               type="list"
               color="red"
@@ -692,7 +692,7 @@ onUnmounted(() => {
               :data="footerStats.topLate"
             />
             
-            <AppleSummaryCard 
+            <SummaryCard 
               title="请假天数榜" 
               type="list"
               color="purple"
