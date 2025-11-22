@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import StatCard from './components/StatCard.vue'
 import ReportFooterCard from './components/ReportFooterCard.vue'
 import IconSearch from './components/icons/IconSearch.vue'
@@ -50,16 +50,47 @@ const viewMode = ref('dashboard')
 const filterDept = ref('全部')
 const searchTerm = ref('')
 const hoveredRow = ref(null)
-const monthKeys = ['25.01', '25.02', '25.03', '25.04', '25.05', '25.06']
+const allMonthKeys = ['25.01', '25.02', '25.03', '25.04', '25.05', '25.06']
+
+// 报表视图的筛选状态
+const selectedNames = ref([])
+const selectedDepts = ref([])
+const startMonth = ref('25.01')
+const endMonth = ref('25.06')
+const showNameDropdown = ref(false)
+const showDeptDropdown = ref(false)
+const showMonthDropdown = ref(false)
 
 const departments = computed(() => ['全部', ...new Set(data.value.map(i => i.dept))])
+const allNames = computed(() => [...new Set(data.value.map(i => i.name))].sort())
+const allDepts = computed(() => [...new Set(data.value.map(i => i.dept))].sort())
+
+// 根据选择的月份范围生成月份列表
+const monthKeys = computed(() => {
+  const startIdx = allMonthKeys.indexOf(startMonth.value)
+  const endIdx = allMonthKeys.indexOf(endMonth.value)
+  if (startIdx === -1 || endIdx === -1 || startIdx > endIdx) {
+    return allMonthKeys
+  }
+  return allMonthKeys.slice(startIdx, endIdx + 1)
+})
 
 const filteredData = computed(() => {
-  return data.value.filter(item => {
-    const matchesDept = filterDept.value === '全部' || item.dept === filterDept.value
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.value.toLowerCase())
-    return matchesDept && matchesSearch
-  })
+  if (viewMode.value === 'report') {
+    // 报表视图：使用多选筛选
+    return data.value.filter(item => {
+      const matchesName = selectedNames.value.length === 0 || selectedNames.value.includes(item.name)
+      const matchesDept = selectedDepts.value.length === 0 || selectedDepts.value.includes(item.dept)
+      return matchesName && matchesDept
+    })
+  } else {
+    // 概览视图：使用原有筛选
+    return data.value.filter(item => {
+      const matchesDept = filterDept.value === '全部' || item.dept === filterDept.value
+      const matchesSearch = item.name.toLowerCase().includes(searchTerm.value.toLowerCase())
+      return matchesDept && matchesSearch
+    })
+  }
 })
 
 const stats = computed(() => {
@@ -70,18 +101,18 @@ const stats = computed(() => {
 
 const columnValues = computed(() => {
   const map = {}
-  monthKeys.forEach(m => map[m] = data.value.map(row => row.monthlyHours[m]))
+  monthKeys.value.forEach(m => map[m] = filteredData.value.map(row => row.monthlyHours[m]))
   return map
 })
 
 const footerStats = computed(() => {
-  if (data.value.length === 0) return {}
-  const maxMissing = [...data.value].sort((a, b) => b.stats.missingCard - a.stats.missingCard)[0]
-  const maxLeave = [...data.value].sort((a, b) => b.stats.leave - a.stats.leave)[0]
-  const maxLate = [...data.value].sort((a, b) => b.stats.late - a.stats.late)[0]
+  if (filteredData.value.length === 0) return {}
+  const maxMissing = [...filteredData.value].sort((a, b) => b.stats.missingCard - a.stats.missingCard)[0]
+  const maxLeave = [...filteredData.value].sort((a, b) => b.stats.leave - a.stats.leave)[0]
+  const maxLate = [...filteredData.value].sort((a, b) => b.stats.late - a.stats.late)[0]
   
   let totalSum = 0, totalCount = 0
-  data.value.forEach(d => monthKeys.forEach(m => { totalSum += d.monthlyHours[m]; totalCount++ }))
+  filteredData.value.forEach(d => monthKeys.value.forEach(m => { totalSum += d.monthlyHours[m]; totalCount++ }))
   
   return { 
     maxMissingUser: maxMissing, 
@@ -92,10 +123,13 @@ const footerStats = computed(() => {
 })
 
 const getCellColor = (val, allValuesInColumn) => {
+  // 小于9小时
   if (val < 9) return 'bg-[#FEF2F2] text-[#B91C1C] border border-[#FECACA]/50 font-medium shadow-[0_1px_2px_rgba(220,38,38,0.05)]'
   
   const sorted = [...allValuesInColumn].sort((a, b) => b - a)
+  // 前3
   const top3 = sorted.slice(0, 3)
+  // 后3
   const bottom3 = sorted.slice(-3)
 
   if (top3.includes(val)) return 'bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]/50 font-medium shadow-[0_1px_2px_rgba(22,163,74,0.05)]'
@@ -103,6 +137,32 @@ const getCellColor = (val, allValuesInColumn) => {
 
   return 'text-gray-600'
 }
+
+// 月份选择验证：确保起始月份不大于结束月份
+watch([startMonth, endMonth], ([start, end]) => {
+  const startIdx = allMonthKeys.indexOf(start)
+  const endIdx = allMonthKeys.indexOf(end)
+  if (startIdx > endIdx) {
+    endMonth.value = start
+  }
+})
+
+// 点击外部关闭下拉菜单
+const handleClickOutside = (event) => {
+  if (!event.target.closest('.dropdown-container')) {
+    showNameDropdown.value = false
+    showDeptDropdown.value = false
+    showMonthDropdown.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <template>
@@ -227,38 +287,146 @@ const getCellColor = (val, allValuesInColumn) => {
 
         <!-- Report View -->
         <div v-else key="report" class="space-y-6">
-          <div class="p-2 pl-4 pr-2 rounded-2xl flex flex-wrap gap-4 items-center justify-between bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_8px_40px_rgba(0,0,0,0.03)]">
-            <div class="flex items-center gap-6">
+          
+          <div class="p-2 pl-4 pr-2 rounded-2xl flex flex-wrap gap-4 items-center justify-between bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_8px_40px_rgba(0,0,0,0.03)] relative z-40">
+            <div class="flex items-center gap-6 flex-wrap">
+              <!-- 选择姓名 -->
+              <div class="relative dropdown-container">
+                <button 
+                  @click.stop="showNameDropdown = !showNameDropdown"
+                  class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 border bg-white/80 hover:bg-white text-gray-700 border-gray-200/60 hover:border-blue-500/30 hover:shadow-sm backdrop-blur-sm"
+                >
+                  <IconUsers class="w-4 h-4 text-gray-500"></IconUsers>
+                  <span>姓名</span>
+                  <!-- <span v-if="selectedNames.length > 0" class="px-2 py-0.5 rounded-full bg-blue-500 text-white text-xs">{{ selectedNames.length }}</span> -->
+                  <IconChevronRight class="w-3 h-3 transition-transform" :class="showNameDropdown ? 'rotate-90' : ''"></IconChevronRight>
+                </button>
+                <div v-if="showNameDropdown" @click.stop class="absolute top-full left-0 mt-2 w-64 bg-white/95 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-[0_8px_40px_rgba(0,0,0,0.08)] z-[100] max-h-80 overflow-y-auto">
+                  <div class="p-2">
+                    <div class="flex items-center justify-between p-2 border-b border-gray-100">
+                      <span class="text-xs font-semibold text-gray-500">选择姓名</span>
+                      <button @click.stop="selectedNames = []" class="text-xs text-blue-500 hover:text-blue-600">清空</button>
+                    </div>
+                    <div class="p-2 space-y-1">
+                      <label v-for="name in allNames" :key="name" class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                        <input 
+                          type="checkbox" 
+                          :value="name"
+                          v-model="selectedNames"
+                          @click.stop
+                          class="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+                        />
+                        <span class="text-sm text-gray-700">{{ name }}</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 选择所属团队 -->
+              <div class="relative dropdown-container">
+                <button 
+                  @click.stop="showDeptDropdown = !showDeptDropdown"
+                  class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 border bg-white/80 hover:bg-white text-gray-700 border-gray-200/60 hover:border-blue-500/30 hover:shadow-sm backdrop-blur-sm"
+                >
+                  <IconFilter class="w-4 h-4 text-gray-500"></IconFilter>
+                  <span>所属团队</span>
+                  <!-- <span v-if="selectedDepts.length > 0" class="px-2 py-0.5 rounded-full bg-blue-500 text-white text-xs">{{ selectedDepts.length }}</span> -->
+                  <IconChevronRight class="w-3 h-3 transition-transform" :class="showDeptDropdown ? 'rotate-90' : ''"></IconChevronRight>
+                </button>
+                <div v-if="showDeptDropdown" @click.stop class="absolute top-full left-0 mt-2 w-48 bg-white/95 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-[0_8px_40px_rgba(0,0,0,0.08)] z-[100] max-h-80 overflow-y-auto">
+                  <div class="p-2">
+                    <div class="flex items-center justify-between p-2 border-b border-gray-100">
+                      <span class="text-xs font-semibold text-gray-500">选择团队</span>
+                      <button @click.stop="selectedDepts = []" class="text-xs text-blue-500 hover:text-blue-600">清空</button>
+                    </div>
+                    <div class="p-2 space-y-1">
+                      <label v-for="dept in allDepts" :key="dept" class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                        <input 
+                          type="checkbox" 
+                          :value="dept"
+                          v-model="selectedDepts"
+                          @click.stop
+                          class="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+                        />
+                        <span class="text-sm text-gray-700">{{ dept }}</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 选择月份范围 -->
+              <div class="relative dropdown-container">
+                <button 
+                  @click.stop="showMonthDropdown = !showMonthDropdown"
+                  class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 border bg-white/80 hover:bg-white text-gray-700 border-gray-200/60 hover:border-blue-500/30 hover:shadow-sm backdrop-blur-sm"
+                >
+                  <IconCalendar class="w-4 h-4 text-gray-500"></IconCalendar>
+                  <span>月份范围</span>
+                  <span class="text-xs text-gray-500">{{ startMonth }} - {{ endMonth }}</span>
+                  <IconChevronRight class="w-3 h-3 transition-transform" :class="showMonthDropdown ? 'rotate-90' : ''"></IconChevronRight>
+                </button>
+                <div v-if="showMonthDropdown" @click.stop class="absolute top-full left-0 mt-2 w-64 bg-white/95 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-[0_8px_40px_rgba(0,0,0,0.08)] z-[100]">
+                  <div class="p-4">
+                    <div class="space-y-4">
+                      <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-2">起始月份</label>
+                        <select 
+                          v-model="startMonth"
+                          @change.stop
+                          class="w-full px-3 py-2 rounded-lg text-sm border border-gray-200/60 bg-white focus:border-blue-500/30 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                        >
+                          <option v-for="month in allMonthKeys" :key="month" :value="month">{{ month }}</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-2">结束月份</label>
+                        <select 
+                          v-model="endMonth"
+                          @change.stop
+                          class="w-full px-3 py-2 rounded-lg text-sm border border-gray-200/60 bg-white focus:border-blue-500/30 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                        >
+                          <option v-for="month in allMonthKeys" :key="month" :value="month">{{ month }}</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="h-8 w-px bg-gray-200/60"></div>
+              
               <div class="flex items-center gap-2">
                 <div class="bg-gray-100/80 p-1.5 rounded-lg text-gray-500"><IconUsers class="w-4 h-4"></IconUsers></div>
                 <div class="flex flex-col">
-                  <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Selected</span>
-                  <span class="text-sm font-semibold text-gray-800">{{ filteredData.length }} People</span>
+                  <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">已选人数</span>
+                  <span class="text-sm font-semibold text-gray-800">{{ filteredData.length }} 人</span>
                 </div>
               </div>
               <div class="h-8 w-px bg-gray-200/60"></div>
               <div class="flex items-center gap-2">
                 <div class="bg-gray-100/80 p-1.5 rounded-lg text-gray-500"><IconCalendar class="w-4 h-4"></IconCalendar></div>
                 <div class="flex flex-col">
-                  <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Period</span>
-                  <span class="text-sm font-semibold text-gray-800">25.01 - 25.06</span>
+                  <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">时间范围</span>
+                  <span class="text-sm font-semibold text-gray-800">{{ startMonth }} - {{ endMonth }}</span>
                 </div>
               </div>
             </div>
             <div class="flex items-center gap-3 bg-gray-50/50 px-3 py-2 rounded-xl border border-gray-100/50">
-              <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600"><span class="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.4)]"></span> Top 3</div>
-              <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600"><span class="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.4)]"></span> Bottom 3</div>
+              <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600"><span class="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.4)]"></span> 前三名</div>
+              <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600"><span class="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.4)]"></span> 后三名</div>
               <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600"><span class="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.4)]"></span> &lt;9h</div>
             </div>
           </div>
 
-          <div class="rounded-3xl overflow-hidden bg-white/40 border border-white/50 shadow-sm backdrop-blur-xl">
+          <div class="rounded-3xl overflow-hidden bg-white/40 border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.12)] backdrop-blur-xl">
             <div class="overflow-x-auto custom-scrollbar">
               <table class="min-w-full border-collapse">
                 <thead>
                   <tr>
-                    <th class="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/80 border-b border-gray-200/60 backdrop-blur-md sticky top-0 z-20 w-28 text-left sticky left-0 shadow-[4px_0_12px_rgba(0,0,0,0.02)] bg-white/95">姓名</th>
-                    <th class="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/80 border-b border-gray-200/60 backdrop-blur-md sticky top-0 z-20 w-32 text-left">所属团队</th>
+                    <th class="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/80 border-b border-gray-200/60 backdrop-blur-md sticky top-0 z-30 w-28 text-left sticky left-0 shadow-[4px_0_12px_rgba(0,0,0,0.02)] bg-white/95">姓名</th>
+                    <th class="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/80 border-b border-gray-200/60 backdrop-blur-md sticky top-0 z-30 w-32 text-left sticky left-[75px] shadow-[4px_0_12px_rgba(0,0,0,0.02)] bg-white/95">所属团队</th>
                     <th v-for="m in monthKeys" :key="m" class="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/80 border-b border-gray-200/60 backdrop-blur-md sticky top-0 z-20 text-center min-w-[90px]">
                       <div class="flex flex-col">
                         <span class="text-gray-800">{{ m }}</span>
@@ -273,19 +441,20 @@ const getCellColor = (val, allValuesInColumn) => {
                   </tr>
                 </thead>
                 <tbody class="relative">
-                  <tr v-for="row in filteredData" :key="row.id" class="group hover:bg-blue-100/80 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out cursor-pointer relative z-0 hover:z-20">
-                    <td class="px-4 py-3.5 text-sm text-gray-900 border-b border-gray-100/80 whitespace-nowrap font-semibold sticky left-0 bg-white/90 group-hover:bg-blue-100/90 backdrop-blur-lg border-r border-gray-200/60 group-hover:border-blue-300/80 group-hover:shadow-[4px_0_16px_rgba(59,130,246,0.15)] z-10 shadow-[4px_0_12px_rgba(0,0,0,0.02)] transition-all duration-300">{{ row.name }}</td>
-                    <td class="px-4 py-3.5 text-sm text-gray-700 border-b border-gray-100/80 whitespace-nowrap">
+                  <!-- 表格行 -->
+                  <tr v-for="row in filteredData" :key="row.id" class="group hover:bg-blue-100/80 transition-all duration-300 ease-out cursor-pointer relative z-0">
+                    <td class="px-4 py-3.5 text-sm text-gray-900 border-b border-gray-100/80 whitespace-nowrap font-semibold sticky left-0 bg-white/90 group-hover:bg-blue-100/90 backdrop-blur-lg border-r border-gray-200/60 group-hover:border-blue-300/80 group-hover:shadow-[4px_0_16px_rgba(59,130,246,0.15)] z-30 shadow-[4px_0_12px_rgba(0,0,0,0.02)] transition-all duration-300">{{ row.name }}</td>
+                    <td class="px-4 py-3.5 text-sm text-gray-700 border-b border-gray-100/80 whitespace-nowrap sticky left-[75px] bg-white/90 group-hover:bg-blue-100/90 backdrop-blur-lg border-r border-gray-200/60 group-hover:border-blue-300/80 group-hover:shadow-[4px_0_16px_rgba(59,130,246,0.15)] z-30 shadow-[4px_0_12px_rgba(0,0,0,0.02)] transition-all duration-300">
                       <span class="px-2 py-0.5 rounded-md bg-gray-100/50 text-gray-500 text-xs border border-gray-200/50">{{ row.dept }}</span>
                     </td>
-                    <td v-for="m in monthKeys" :key="m" class="px-4 py-3.5 text-sm text-gray-700 border-b border-gray-100/80 whitespace-nowrap text-center p-2">
+                    <td v-for="m in monthKeys" :key="m" class="px-4 py-3.5 text-sm text-gray-700 border-b border-gray-100/80 whitespace-nowrap text-center p-2 relative z-0">
                       <div class="py-1.5 rounded-lg text-xs transition-transform hover:scale-105" :class="getCellColor(row.monthlyHours[m], columnValues[m])">{{ row.monthlyHours[m].toFixed(2) }}</div>
                     </td>
-                    <td class="px-4 py-3.5 text-sm text-gray-600 border-b border-gray-100/80 whitespace-nowrap text-center bg-blue-50/10 font-medium">{{ row.stats.missingCard }}</td>
-                    <td class="px-4 py-3.5 text-sm text-gray-400 border-b border-gray-100/80 whitespace-nowrap text-center">{{ row.stats.businessTrip || '-' }}</td>
-                    <td class="px-4 py-3.5 text-sm text-gray-400 border-b border-gray-100/80 whitespace-nowrap text-center">{{ row.stats.compLeave || '-' }}</td>
-                    <td class="px-4 py-3.5 text-sm text-gray-400 border-b border-gray-100/80 whitespace-nowrap text-center">{{ row.stats.leave || '-' }}</td>
-                    <td class="px-4 py-3.5 text-sm text-gray-400 border-b border-gray-100/80 whitespace-nowrap text-center">{{ row.stats.late || '-' }}</td>
+                    <td class="px-4 py-3.5 text-sm text-gray-600 border-b border-gray-100/80 whitespace-nowrap text-center bg-blue-50/10 font-medium relative z-0">{{ row.stats.missingCard }}</td>
+                    <td class="px-4 py-3.5 text-sm text-gray-400 border-b border-gray-100/80 whitespace-nowrap text-center relative z-0">{{ row.stats.businessTrip || '-' }}</td>
+                    <td class="px-4 py-3.5 text-sm text-gray-400 border-b border-gray-100/80 whitespace-nowrap text-center relative z-0">{{ row.stats.compLeave || '-' }}</td>
+                    <td class="px-4 py-3.5 text-sm text-gray-400 border-b border-gray-100/80 whitespace-nowrap text-center relative z-0">{{ row.stats.leave || '-' }}</td>
+                    <td class="px-4 py-3.5 text-sm text-gray-400 border-b border-gray-100/80 whitespace-nowrap text-center relative z-0">{{ row.stats.late || '-' }}</td>
                   </tr>
                 </tbody>
               </table>
