@@ -59,3 +59,37 @@ body {
 }
 
 .card-enter-from { opacity: 0; transform: translateY(20px); filter: blur(10px); }
+
+/* 8. 下拉菜单动画 */
+.dropdown-enter-active {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.dropdown-leave-active {
+  transition: all 0.2s cubic-bezier(0.4, 0, 1, 1);
+}
+.dropdown-enter-from {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
+  filter: blur(4px);
+}
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+  filter: blur(2px);
+}
+
+/* 9. 徽章动画 */
+.badge-enter-active {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.badge-leave-active {
+  transition: all 0.2s cubic-bezier(0.4, 0, 1, 1);
+}
+.badge-enter-from {
+  opacity: 0;
+  transform: scale(0);
+}
+.badge-leave-to {
+  opacity: 0;
+  transform: scale(0);
+}

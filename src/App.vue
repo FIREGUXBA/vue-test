@@ -147,6 +147,31 @@ watch([startMonth, endMonth], ([start, end]) => {
   }
 })
 
+// 切换下拉菜单的方法，确保每次只打开一个
+const toggleNameDropdown = () => {
+  const wasOpen = showNameDropdown.value
+  showNameDropdown.value = false
+  showDeptDropdown.value = false
+  showMonthDropdown.value = false
+  showNameDropdown.value = !wasOpen
+}
+
+const toggleDeptDropdown = () => {
+  const wasOpen = showDeptDropdown.value
+  showNameDropdown.value = false
+  showDeptDropdown.value = false
+  showMonthDropdown.value = false
+  showDeptDropdown.value = !wasOpen
+}
+
+const toggleMonthDropdown = () => {
+  const wasOpen = showMonthDropdown.value
+  showNameDropdown.value = false
+  showDeptDropdown.value = false
+  showMonthDropdown.value = false
+  showMonthDropdown.value = !wasOpen
+}
+
 // 点击外部关闭下拉菜单
 const handleClickOutside = (event) => {
   if (!event.target.closest('.dropdown-container')) {
@@ -293,130 +318,136 @@ onUnmounted(() => {
               <!-- 选择姓名 -->
               <div class="relative dropdown-container">
                 <button 
-                  @click.stop="showNameDropdown = !showNameDropdown"
-                  class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 border bg-white/80 hover:bg-white text-gray-700 border-gray-200/60 hover:border-blue-500/30 hover:shadow-sm backdrop-blur-sm"
+                  @click.stop="toggleNameDropdown"
+                  class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border relative overflow-hidden group"
+                  :class="showNameDropdown || selectedNames.length > 0
+                    ? 'bg-blue-50/90 hover:bg-blue-50 text-blue-700 border-blue-300/50 shadow-md shadow-blue-500/10 backdrop-blur-sm'
+                    : 'bg-white/80 hover:bg-white text-gray-700 border-gray-200/60 hover:border-blue-500/30 hover:shadow-sm backdrop-blur-sm'"
                 >
-                  <IconUsers class="w-4 h-4 text-gray-500"></IconUsers>
+                  <IconUsers class="w-4 h-4 transition-colors duration-300" :class="showNameDropdown || selectedNames.length > 0 ? 'text-blue-600' : 'text-gray-500'"></IconUsers>
                   <span>姓名</span>
-                  <!-- <span v-if="selectedNames.length > 0" class="px-2 py-0.5 rounded-full bg-blue-500 text-white text-xs">{{ selectedNames.length }}</span> -->
-                  <IconChevronRight class="w-3 h-3 transition-transform" :class="showNameDropdown ? 'rotate-90' : ''"></IconChevronRight>
+                  <IconChevronRight class="w-3 h-3 transition-all duration-300" :class="showNameDropdown ? 'rotate-90 text-blue-600' : 'text-gray-400'"></IconChevronRight>
                 </button>
-                <div v-if="showNameDropdown" @click.stop class="absolute top-full left-0 mt-2 w-64 bg-white/95 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-[0_8px_40px_rgba(0,0,0,0.08)] z-[100] max-h-80 overflow-y-auto">
-                  <div class="p-2">
-                    <div class="flex items-center justify-between p-2 border-b border-gray-100">
-                      <span class="text-xs font-semibold text-gray-500">选择姓名</span>
-                      <button @click.stop="selectedNames = []" class="text-xs text-blue-500 hover:text-blue-600">清空</button>
-                    </div>
-                    <div class="p-2 space-y-1">
-                      <label v-for="name in allNames" :key="name" class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                        <input 
-                          type="checkbox" 
-                          :value="name"
-                          v-model="selectedNames"
-                          @click.stop
-                          class="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
-                        />
-                        <span class="text-sm text-gray-700">{{ name }}</span>
-                      </label>
+                <transition name="dropdown">
+                  <div v-if="showNameDropdown" @click.stop class="absolute top-full left-0 mt-2 w-64 bg-white/95 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-[0_8px_40px_rgba(0,0,0,0.12)] z-[100] max-h-80 overflow-y-auto custom-scrollbar">
+                    <div class="p-2">
+                      <div class="flex items-center justify-between p-2 border-b border-gray-100">
+                        <span class="text-xs font-semibold text-gray-500">选择姓名</span>
+                        <button @click.stop="selectedNames = []" class="text-xs text-blue-500 hover:text-blue-600 font-medium transition-colors duration-200 px-2 py-1 rounded-md hover:bg-blue-50">清空</button>
+                      </div>
+                      <div class="p-2 space-y-1">
+                        <label v-for="name in allNames" :key="name" class="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50/50 cursor-pointer transition-all duration-200 group/item">
+                          <input 
+                            type="checkbox" 
+                            :value="name"
+                            v-model="selectedNames"
+                            @click.stop
+                            class="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-0 transition-all duration-200 cursor-pointer"
+                          />
+                          <span class="text-sm text-gray-700 group-hover/item:text-blue-700 transition-colors duration-200">{{ name }}</span>
+                        </label>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </transition>
               </div>
 
               <!-- 选择所属团队 -->
               <div class="relative dropdown-container">
                 <button 
-                  @click.stop="showDeptDropdown = !showDeptDropdown"
-                  class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 border bg-white/80 hover:bg-white text-gray-700 border-gray-200/60 hover:border-blue-500/30 hover:shadow-sm backdrop-blur-sm"
+                  @click.stop="toggleDeptDropdown"
+                  class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border relative overflow-hidden group"
+                  :class="showDeptDropdown || selectedDepts.length > 0
+                    ? 'bg-blue-50/90 hover:bg-blue-50 text-blue-700 border-blue-300/50 shadow-md shadow-blue-500/10 backdrop-blur-sm'
+                    : 'bg-white/80 hover:bg-white text-gray-700 border-gray-200/60 hover:border-blue-500/30 hover:shadow-sm backdrop-blur-sm'"
                 >
-                  <IconFilter class="w-4 h-4 text-gray-500"></IconFilter>
+                  <IconFilter class="w-4 h-4 transition-colors duration-300" :class="showDeptDropdown || selectedDepts.length > 0 ? 'text-blue-600' : 'text-gray-500'"></IconFilter>
                   <span>所属团队</span>
-                  <!-- <span v-if="selectedDepts.length > 0" class="px-2 py-0.5 rounded-full bg-blue-500 text-white text-xs">{{ selectedDepts.length }}</span> -->
-                  <IconChevronRight class="w-3 h-3 transition-transform" :class="showDeptDropdown ? 'rotate-90' : ''"></IconChevronRight>
+                  <IconChevronRight class="w-3 h-3 transition-all duration-300" :class="showDeptDropdown ? 'rotate-90 text-blue-600' : 'text-gray-400'"></IconChevronRight>
                 </button>
-                <div v-if="showDeptDropdown" @click.stop class="absolute top-full left-0 mt-2 w-48 bg-white/95 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-[0_8px_40px_rgba(0,0,0,0.08)] z-[100] max-h-80 overflow-y-auto">
-                  <div class="p-2">
-                    <div class="flex items-center justify-between p-2 border-b border-gray-100">
-                      <span class="text-xs font-semibold text-gray-500">选择团队</span>
-                      <button @click.stop="selectedDepts = []" class="text-xs text-blue-500 hover:text-blue-600">清空</button>
-                    </div>
-                    <div class="p-2 space-y-1">
-                      <label v-for="dept in allDepts" :key="dept" class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                        <input 
-                          type="checkbox" 
-                          :value="dept"
-                          v-model="selectedDepts"
-                          @click.stop
-                          class="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
-                        />
-                        <span class="text-sm text-gray-700">{{ dept }}</span>
-                      </label>
+                <transition name="dropdown">
+                  <div v-if="showDeptDropdown" @click.stop class="absolute top-full left-0 mt-2 w-48 bg-white/95 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-[0_8px_40px_rgba(0,0,0,0.12)] z-[100] max-h-80 overflow-y-auto custom-scrollbar">
+                    <div class="p-2">
+                      <div class="flex items-center justify-between p-2 border-b border-gray-100">
+                        <span class="text-xs font-semibold text-gray-500">选择团队</span>
+                        <button @click.stop="selectedDepts = []" class="text-xs text-blue-500 hover:text-blue-600 font-medium transition-colors duration-200 px-2 py-1 rounded-md hover:bg-blue-50">清空</button>
+                      </div>
+                      <div class="p-2 space-y-1">
+                        <label v-for="dept in allDepts" :key="dept" class="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50/50 cursor-pointer transition-all duration-200 group/item">
+                          <input 
+                            type="checkbox" 
+                            :value="dept"
+                            v-model="selectedDepts"
+                            @click.stop
+                            class="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-0 transition-all duration-200 cursor-pointer"
+                          />
+                          <span class="text-sm text-gray-700 group-hover/item:text-blue-700 transition-colors duration-200">{{ dept }}</span>
+                        </label>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </transition>
               </div>
 
               <!-- 选择月份范围 -->
               <div class="relative dropdown-container">
                 <button 
-                  @click.stop="showMonthDropdown = !showMonthDropdown"
-                  class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 border bg-white/80 hover:bg-white text-gray-700 border-gray-200/60 hover:border-blue-500/30 hover:shadow-sm backdrop-blur-sm"
+                  @click.stop="toggleMonthDropdown"
+                  class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border relative overflow-hidden group"
+                  :class="showMonthDropdown
+                    ? 'bg-blue-50/90 hover:bg-blue-50 text-blue-700 border-blue-300/50 shadow-md shadow-blue-500/10 backdrop-blur-sm'
+                    : 'bg-white/80 hover:bg-white text-gray-700 border-gray-200/60 hover:border-blue-500/30 hover:shadow-sm backdrop-blur-sm'"
                 >
-                  <IconCalendar class="w-4 h-4 text-gray-500"></IconCalendar>
+                  <IconCalendar class="w-4 h-4 transition-colors duration-300" :class="showMonthDropdown ? 'text-blue-600' : 'text-gray-500'"></IconCalendar>
                   <span>月份范围</span>
-                  <span class="text-xs text-gray-500">{{ startMonth }} - {{ endMonth }}</span>
-                  <IconChevronRight class="w-3 h-3 transition-transform" :class="showMonthDropdown ? 'rotate-90' : ''"></IconChevronRight>
+                  <span class="text-xs px-2 py-0.5 rounded-md bg-gray-100/80 text-gray-600 font-medium transition-colors duration-300" :class="showMonthDropdown ? 'bg-blue-100 text-blue-700' : ''">{{ startMonth }} - {{ endMonth }}</span>
+                  <IconChevronRight class="w-3 h-3 transition-all duration-300" :class="showMonthDropdown ? 'rotate-90 text-blue-600' : 'text-gray-400'"></IconChevronRight>
                 </button>
-                <div v-if="showMonthDropdown" @click.stop class="absolute top-full left-0 mt-2 w-64 bg-white/95 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-[0_8px_40px_rgba(0,0,0,0.08)] z-[100]">
-                  <div class="p-4">
-                    <div class="space-y-4">
-                      <div>
-                        <label class="block text-xs font-semibold text-gray-500 mb-2">起始月份</label>
-                        <select 
-                          v-model="startMonth"
-                          @change.stop
-                          class="w-full px-3 py-2 rounded-lg text-sm border border-gray-200/60 bg-white focus:border-blue-500/30 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-                        >
-                          <option v-for="month in allMonthKeys" :key="month" :value="month">{{ month }}</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label class="block text-xs font-semibold text-gray-500 mb-2">结束月份</label>
-                        <select 
-                          v-model="endMonth"
-                          @change.stop
-                          class="w-full px-3 py-2 rounded-lg text-sm border border-gray-200/60 bg-white focus:border-blue-500/30 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-                        >
-                          <option v-for="month in allMonthKeys" :key="month" :value="month">{{ month }}</option>
-                        </select>
+                <transition name="dropdown">
+                  <div v-if="showMonthDropdown" @click.stop class="absolute top-full left-0 mt-2 w-64 bg-white/95 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-[0_8px_40px_rgba(0,0,0,0.12)] z-[100]">
+                    <div class="p-4">
+                      <div class="space-y-4">
+                        <div>
+                          <label class="block text-xs font-semibold text-gray-500 mb-2">起始月份</label>
+                          <select 
+                            v-model="startMonth"
+                            @change.stop
+                            class="w-full px-3 py-2 rounded-lg text-sm border border-gray-200/60 bg-white focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-200 hover:border-blue-300/50 cursor-pointer"
+                          >
+                            <option v-for="month in allMonthKeys" :key="month" :value="month">{{ month }}</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label class="block text-xs font-semibold text-gray-500 mb-2">结束月份</label>
+                          <select 
+                            v-model="endMonth"
+                            @change.stop
+                            class="w-full px-3 py-2 rounded-lg text-sm border border-gray-200/60 bg-white focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-200 hover:border-blue-300/50 cursor-pointer"
+                          >
+                            <option v-for="month in allMonthKeys" :key="month" :value="month">{{ month }}</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
                   </div>
+                </transition>
+              </div>
+
+              <div class="h-8 w-px bg-gray-200/60 transition-opacity duration-300"></div>
+              
+              <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50/50 border border-gray-100/50 hover:bg-gray-50 transition-all duration-300 group">
+                <div class="bg-gray-100/80 p-1.5 rounded-lg text-gray-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all duration-300"><IconUsers class="w-4 h-4"></IconUsers></div>
+                <div class="flex flex-col">
+                  <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">已选人数</span>
+                  <span class="text-sm font-semibold text-gray-800 group-hover:text-blue-700 transition-colors duration-300">{{ filteredData.length }} 人</span>
                 </div>
               </div>
 
-              <div class="h-8 w-px bg-gray-200/60"></div>
-              
-              <div class="flex items-center gap-2">
-                <div class="bg-gray-100/80 p-1.5 rounded-lg text-gray-500"><IconUsers class="w-4 h-4"></IconUsers></div>
-                <div class="flex flex-col">
-                  <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">已选人数</span>
-                  <span class="text-sm font-semibold text-gray-800">{{ filteredData.length }} 人</span>
-                </div>
-              </div>
-              <div class="h-8 w-px bg-gray-200/60"></div>
-              <div class="flex items-center gap-2">
-                <div class="bg-gray-100/80 p-1.5 rounded-lg text-gray-500"><IconCalendar class="w-4 h-4"></IconCalendar></div>
-                <div class="flex flex-col">
-                  <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">时间范围</span>
-                  <span class="text-sm font-semibold text-gray-800">{{ startMonth }} - {{ endMonth }}</span>
-                </div>
-              </div>
             </div>
-            <div class="flex items-center gap-3 bg-gray-50/50 px-3 py-2 rounded-xl border border-gray-100/50">
-              <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600"><span class="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.4)]"></span> 前三名</div>
-              <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600"><span class="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.4)]"></span> 后三名</div>
-              <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600"><span class="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.4)]"></span> &lt;9h</div>
+            <div class="flex items-center gap-3 bg-gray-50/50 px-3 py-2 rounded-xl border border-gray-100/50 hover:bg-gray-50/80 transition-all duration-300">
+              <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 transition-all duration-300 hover:scale-105"><span class="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.4)] animate-pulse"></span> 前三名</div>
+              <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 transition-all duration-300 hover:scale-105"><span class="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.4)] animate-pulse"></span> 后三名</div>
+              <div class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 transition-all duration-300 hover:scale-105"><span class="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.4)] animate-pulse"></span> &lt;9h</div>
             </div>
           </div>
 
@@ -443,8 +474,8 @@ onUnmounted(() => {
                 <tbody class="relative">
                   <!-- 表格行 -->
                   <tr v-for="row in filteredData" :key="row.id" class="group hover:bg-blue-100/80 transition-all duration-300 ease-out cursor-pointer relative z-0">
-                    <td class="px-4 py-3.5 text-sm text-gray-900 border-b border-gray-100/80 whitespace-nowrap font-semibold sticky left-0 bg-white/90 group-hover:bg-blue-100/90 backdrop-blur-lg border-r border-gray-200/60 group-hover:border-blue-300/80 group-hover:shadow-[4px_0_16px_rgba(59,130,246,0.15)] z-30 shadow-[4px_0_12px_rgba(0,0,0,0.02)] transition-all duration-300">{{ row.name }}</td>
-                    <td class="px-4 py-3.5 text-sm text-gray-700 border-b border-gray-100/80 whitespace-nowrap sticky left-[75px] bg-white/90 group-hover:bg-blue-100/90 backdrop-blur-lg border-r border-gray-200/60 group-hover:border-blue-300/80 group-hover:shadow-[4px_0_16px_rgba(59,130,246,0.15)] z-30 shadow-[4px_0_12px_rgba(0,0,0,0.02)] transition-all duration-300">
+                    <td class="px-4 py-3.5 text-sm text-gray-900 border-b border-gray-100/80 whitespace-nowrap font-semibold sticky left-0 bg-white/90 group-hover:bg-blue-100/90 backdrop-blur-lg border-r border-gray-200/60 group-hover:border-blue-300/80 group-hover:shadow-[4px_0_16px_rgba(59,130,246,0.15)] z-30 shadow-[4px_0_12px_rgba(0,0,0,0.02)] transition-all duration-300 ease-out">{{ row.name }}</td>
+                    <td class="px-4 py-3.5 text-sm text-gray-700 border-b border-gray-100/80 whitespace-nowrap sticky left-[75px] bg-white/90 group-hover:bg-blue-100/90 backdrop-blur-lg border-r border-gray-200/60 group-hover:border-blue-300/80 group-hover:shadow-[4px_0_16px_rgba(59,130,246,0.15)] z-30 shadow-[4px_0_12px_rgba(0,0,0,0.02)] transition-all duration-300 ease-out">
                       <span class="px-2 py-0.5 rounded-md bg-gray-100/50 text-gray-500 text-xs border border-gray-200/50">{{ row.dept }}</span>
                     </td>
                     <td v-for="m in monthKeys" :key="m" class="px-4 py-3.5 text-sm text-gray-700 border-b border-gray-100/80 whitespace-nowrap text-center p-2 relative z-0">
