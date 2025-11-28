@@ -655,7 +655,7 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5 pb-12">
+          <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5 pb-12">
             
             <SummaryCard 
               title="平均工时" 
