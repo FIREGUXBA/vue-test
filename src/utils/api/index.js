@@ -1,8 +1,31 @@
 import axios from 'axios'
 
+// 从环境变量构建 API baseURL
+const getBaseURL = () => {
+  // 优先使用完整的 baseURL
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL
+  }
+  
+  // 如果提供了主机和端口，则组合构建
+  const host = import.meta.env.VITE_API_HOST
+  const port = import.meta.env.VITE_API_PORT
+  
+  if (host && port) {
+    return `http://${host}:${port}/api`
+  }
+  
+  if (host) {
+    return `http://${host}/api`
+  }
+  
+  // 默认使用相对路径
+  return '/api'
+}
+
 // 创建 axios 实例
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api', // 使用环境变量
+  baseURL: getBaseURL(),
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
