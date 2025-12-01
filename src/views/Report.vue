@@ -15,7 +15,7 @@ const data = inject('data')
 const selectedNames = ref([])
 const selectedDepts = ref([])
 const startMonth = ref('25.01')
-const endMonth = ref('25.06')
+const endMonth = ref('25.03')
 
 // 计算选择的月份数量
 const selectedMonthCount = computed(() => {
@@ -29,7 +29,7 @@ const selectedMonthCount = computed(() => {
 
 // 验证月份范围是否满足至少6个月的要求
 const isMonthRangeValid = computed(() => {
-  return selectedMonthCount.value >= 6
+  return selectedMonthCount.value >= 3
 })
 const showNameDropdown = ref(false)
 const showDeptDropdown = ref(false)
@@ -141,7 +141,7 @@ watch([startMonth, endMonth], ([start, end]) => {
   
   const monthCount = endIdx - startIdx + 1
   if (monthCount < 3) {
-    const newEndIdx = Math.min(startIdx + 5, allMonthKeys.length - 1)
+    const newEndIdx = Math.min(startIdx + 2, allMonthKeys.length - 1)
     endMonth.value = allMonthKeys[newEndIdx]
   }
 })
@@ -318,13 +318,13 @@ onUnmounted(() => {
                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                           <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                         </svg>
-                        满足要求（至少6个月）
+                        满足要求（至少3个月）
                       </span>
                       <span v-else class="flex items-center gap-1">
                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                           <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
                         </svg>
-                        至少需要选择6个月
+                        至少需要选择3个月
                       </span>
                     </div>
                   </div>

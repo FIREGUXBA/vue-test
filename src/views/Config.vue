@@ -23,6 +23,7 @@ const selectedMonthlyFile = ref('')
 const outputFile = ref('90001.xlsx')
 const workDays = ref(22)
 const SAVE_TO_DATABASE = ref(false) // 是否保存到数据库，默认false
+const OVER_WRITE = ref(false) // 是否覆盖已有数据，默认false
 
 // 已保存的配置快照（用于判断是否有未保存的更改）
 const savedConfig = ref({
@@ -30,7 +31,8 @@ const savedConfig = ref({
   MONTHLY_SUMMARY_FILE: '',
   OUTPUT_FILE: '',
   WORK_DAYS: 22,
-  SAVE_TO_DATABASE: false
+  SAVE_TO_DATABASE: false,
+  OVER_WRITE: false
 })
 
 // 判断是否有未保存的更改
@@ -40,7 +42,8 @@ const hasUnsavedChanges = computed(() => {
     selectedMonthlyFile.value !== savedConfig.value.MONTHLY_SUMMARY_FILE ||
     outputFile.value !== savedConfig.value.OUTPUT_FILE ||
     workDays.value !== savedConfig.value.WORK_DAYS ||
-    SAVE_TO_DATABASE.value !== savedConfig.value.SAVE_TO_DATABASE
+    SAVE_TO_DATABASE.value !== savedConfig.value.SAVE_TO_DATABASE ||
+    OVER_WRITE.value !== savedConfig.value.OVER_WRITE
   )
 })
 
@@ -81,13 +84,15 @@ const getCurrentConfig = async () => {
     outputFile.value = config.OUTPUT_FILE
     workDays.value = config.WORK_DAYS
     SAVE_TO_DATABASE.value = config.SAVE_TO_DATABASE
+    OVER_WRITE.value = config.OVER_WRITE
     // 更新已保存的配置快照
     savedConfig.value = {
       DAILY_STATS_FILE: config.DAILY_STATS_FILE,
       MONTHLY_SUMMARY_FILE: config.MONTHLY_SUMMARY_FILE,
       OUTPUT_FILE: config.OUTPUT_FILE,
       WORK_DAYS: config.WORK_DAYS,
-      SAVE_TO_DATABASE: config.SAVE_TO_DATABASE
+      SAVE_TO_DATABASE: config.SAVE_TO_DATABASE,
+      OVER_WRITE: config.OVER_WRITE
     }
   } catch (error) {
     console.error('获取当前配置失败:', error)
@@ -147,7 +152,8 @@ const saveConfigFunction = async () => {
       MONTHLY_SUMMARY_FILE: selectedMonthlyFile.value,
       OUTPUT_FILE: outputFile.value,
       WORK_DAYS: workDays.value,
-      SAVE_TO_DATABASE: SAVE_TO_DATABASE.value
+      SAVE_TO_DATABASE: SAVE_TO_DATABASE.value,
+      OVER_WRITE: OVER_WRITE.value
     })
     // 更新已保存的配置快照
     savedConfig.value = {
@@ -155,7 +161,8 @@ const saveConfigFunction = async () => {
       MONTHLY_SUMMARY_FILE: selectedMonthlyFile.value,
       OUTPUT_FILE: outputFile.value,
       WORK_DAYS: workDays.value,
-      SAVE_TO_DATABASE: SAVE_TO_DATABASE.value
+      SAVE_TO_DATABASE: SAVE_TO_DATABASE.value,
+      OVER_WRITE: OVER_WRITE.value
     }
     showToast('配置保存成功') 
     await getCurrentConfig()
@@ -325,7 +332,22 @@ onMounted(() => {
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
           <input type="checkbox" v-model="SAVE_TO_DATABASE" class="sr-only peer" />
-          <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#007AFF]"></div>
+          <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5856D6]"></div>
+        </label>
+      </div>
+      <!-- Item 6: 覆盖选项 -->
+      <div v-if="SAVE_TO_DATABASE" class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-[#FF3B30] flex items-center justify-center text-white shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <label class="text-[13px] font-medium text-gray-900">覆盖已有数据</label>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" v-model="OVER_WRITE" class="sr-only peer" />
+          <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#FF3B30]"></div>
         </label>
       </div>
     </div>

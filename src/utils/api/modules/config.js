@@ -33,7 +33,7 @@ export const saveConfig = (configData) => {
   params.append('OUTPUT_FILE', configData.OUTPUT_FILE)
   params.append('WORK_DAYS', configData.WORK_DAYS.toString())
   params.append('SAVE_TO_DATABASE', configData.SAVE_TO_DATABASE ? 'true' : 'false')
-  
+  params.append('OVER_WRITE', configData.OVER_WRITE ? 'true' : 'false')
   return post('/config/save', params.toString(), {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
