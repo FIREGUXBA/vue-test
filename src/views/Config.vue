@@ -1,10 +1,46 @@
 <script setup>
+import { ref, onMounted } from 'vue'
 import IconFileText from '../components/icons/IconFileText.vue'
 import IconBriefcase from '../components/icons/IconBriefcase.vue'
 import IconSave from '../components/icons/IconSave.vue'
 import IconCalendarDays from '../components/icons/IconCalendarDays.vue'
 import IconChevronDown from '../components/icons/IconChevronDown.vue'
 import IconSparkles from '../components/icons/IconSparkles.vue'
+import { getConfigFiles } from '../utils/api/modules/config'
+
+// 文件列表数据
+const dailyFiles = ref([])
+const monthlyFiles = ref([])
+
+// 选中的文件
+const selectedDailyFile = ref('')
+const selectedMonthlyFile = ref('')
+
+// 加载文件列表
+const loadFiles = async () => {
+  try {
+    // 加载每日统计文件
+    const dailyData = await getConfigFiles('daily')
+    dailyFiles.value = Array.isArray(dailyData) ? dailyData : (dailyData?.files || [])
+    if (dailyFiles.value.length > 0 && !selectedDailyFile.value) {
+      selectedDailyFile.value = dailyFiles.value[0]
+    }
+
+    // 加载月度汇总文件
+    const monthlyData = await getConfigFiles('monthly')
+    monthlyFiles.value = Array.isArray(monthlyData) ? monthlyData : (monthlyData?.files || [])
+    if (monthlyFiles.value.length > 0 && !selectedMonthlyFile.value) {
+      selectedMonthlyFile.value = monthlyFiles.value[0]
+    }
+  } catch (error) {
+    console.error('加载文件列表失败:', error)
+  }
+}
+
+// 组件挂载时加载文件列表
+onMounted(() => {
+  loadFiles()
+})
 </script>
 
 <template>
@@ -40,9 +76,9 @@ import IconSparkles from '../components/icons/IconSparkles.vue'
           </div>
         </div>
         <div class="flex-1 w-full sm:w-auto relative">
-          <select class="w-full appearance-none bg-gray-100/50 hover:bg-gray-100 text-gray-700 text-[13px] rounded-lg pl-3 pr-8 py-1.5 border border-transparent focus:bg-white focus:border-blue-500/30 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none cursor-pointer">
-            <option>杭州安恒信息技术股份有限公司_每日统计_20251001-20251031.xlsx</option>
-            <option>杭州安恒信息技术股份有限公司_每日统计_20250901-20250930.xlsx</option>
+          <select v-model="selectedDailyFile" class="w-full appearance-none bg-gray-100/50 hover:bg-gray-100 text-gray-700 text-[13px] rounded-lg pl-3 pr-8 py-1.5 border border-transparent focus:bg-white focus:border-blue-500/30 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none cursor-pointer">
+            <option v-for="file in dailyFiles" :key="file" :value="file">{{ file }}</option>
+            <option v-if="dailyFiles.length === 0" disabled>暂无文件</option>
           </select>
           <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-gray-400">
             <IconChevronDown class="w-3.5 h-3.5"></IconChevronDown>
@@ -62,8 +98,9 @@ import IconSparkles from '../components/icons/IconSparkles.vue'
           </div>
         </div>
         <div class="flex-1 w-full sm:w-auto relative">
-          <select class="w-full appearance-none bg-gray-100/50 hover:bg-gray-100 text-gray-700 text-[13px] rounded-lg pl-3 pr-8 py-1.5 border border-transparent focus:bg-white focus:border-purple-500/30 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none cursor-pointer">
-            <option>杭州安恒信息技术股份有限公司_月度汇总（含补卡次数）_20251001-20251031.xlsx</option>
+          <select v-model="selectedMonthlyFile" class="w-full appearance-none bg-gray-100/50 hover:bg-gray-100 text-gray-700 text-[13px] rounded-lg pl-3 pr-8 py-1.5 border border-transparent focus:bg-white focus:border-purple-500/30 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none cursor-pointer">
+            <option v-for="file in monthlyFiles" :key="file" :value="file">{{ file }}</option>
+            <option v-if="monthlyFiles.length === 0" disabled>暂无文件</option>
           </select>
           <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-gray-400">
             <IconChevronDown class="w-3.5 h-3.5"></IconChevronDown>

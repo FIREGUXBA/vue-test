@@ -384,7 +384,7 @@ onUnmounted(() => {
                   <span class="text-[9px] font-normal text-gray-400 mt-0.5">平均工时</span>
                 </div>
               </th>
-              <th class="px-4 py-2 text-[11px] font-semibold text-blue-700/80 uppercase tracking-wider bg-blue-50/50 border-b border-gray-200 text-center">补卡</th>
+              <th class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">补卡</th>
               <th class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">出差</th>
               <th class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">调休</th>
               <th class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">请假</th>
@@ -400,11 +400,11 @@ onUnmounted(() => {
               <td v-for="m in monthKeys" :key="m" class="px-4 py-2 text-[13px] text-gray-700 border-b border-gray-100 whitespace-nowrap text-center">
                 <div class="py-1 rounded text-[12px]" :class="getCellColor(row.monthlyHours[m], columnValues[m])">{{ row.monthlyHours[m].toFixed(2) }}</div>
               </td>
-              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center bg-blue-50/20 font-medium">{{ row.stats.missingCard }}</td>
-              <td class="px-4 py-2 text-[13px] text-gray-400 border-b border-gray-100 whitespace-nowrap text-center">{{ row.stats.businessTrip || '-' }}</td>
-              <td class="px-4 py-2 text-[13px] text-gray-400 border-b border-gray-100 whitespace-nowrap text-center">{{ row.stats.compLeave || '-' }}</td>
-              <td class="px-4 py-2 text-[13px] text-gray-400 border-b border-gray-100 whitespace-nowrap text-center">{{ row.stats.leave || '-' }}</td>
-              <td class="px-4 py-2 text-[13px] text-gray-400 border-b border-gray-100 whitespace-nowrap text-center">{{ row.stats.late || '-' }}</td>
+              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{ row.stats.missingCard }}</td>
+              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{ row.stats.businessTrip || '-' }}</td>
+              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{ row.stats.compLeave || '-' }}</td>
+              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{ row.stats.leave || '-' }}</td>
+              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{ row.stats.late || '-' }}</td>
             </tr>
           </tbody>
         </table>
