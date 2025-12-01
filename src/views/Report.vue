@@ -10,12 +10,83 @@ import IconTrendUp from '../components/icons/IconTrendUp.vue'
 import IconTrendDown from '../components/icons/IconTrendDown.vue'
 import IconClock from '../components/icons/IconClock.vue'
 import { allMonthKeys, getCellColor } from '../utils/data'
+import { queryReportData } from '../utils/api/modules/report'
+const showToast = inject('showToast')
+// 数据状态
+const data = ref([])
+const loading = ref(false)
+const error = ref(null)
+const hasSearched = ref(false) // 是否已执行过查询
 
-const data = inject('data')
+// 筛选条件
 const selectedNames = ref([])
-const selectedDepts = ref([])
+const departmentInput = ref('') // 部门输入框（模糊查询）
 const startMonth = ref('25.01')
 const endMonth = ref('25.03')
+
+// 月份格式转换：25.01 -> 2025-01
+const convertMonthFormat = (monthKey) => {
+  const [year, month] = monthKey.split('.')
+  return `20${year}-${month.padStart(2, '0')}`
+}
+
+// 月份格式转换：2025-08 -> 25.08
+const convertPeriodToMonthKey = (period) => {
+  const [year, month] = period.split('-')
+  return `${year.slice(-2)}.${month}`
+}
+
+// 从 API 返回的数据格式转换为内部格式
+const normalizeData = (apiData) => {
+  if (!Array.isArray(apiData) || apiData.length === 0) {
+    return []
+  }
+
+  // 按员工分组数据
+  const employeeMap = {}
+  
+  apiData.forEach(item => {
+    const employeeId = item.employee_id
+    const employee = item.employee || {}
+    
+    // 如果该员工还没有记录，创建新记录
+    if (!employeeMap[employeeId]) {
+      employeeMap[employeeId] = {
+        id: item.id || employeeId,
+        name: employee.name || '',
+        dept: employee.second_level_dept || employee.third_level_dept || '',
+        monthlyHours: {},
+        stats: {
+          missingCard: 0,
+          businessTrip: 0,
+          compLeave: 0,
+          leave: 0,
+          late: 0,
+          earlyLeave: 0
+        },
+        hours: 0 // 用于统计总工时
+      }
+    }
+    
+    // 转换月份格式并添加工时数据
+    const monthKey = convertPeriodToMonthKey(item.period)
+    employeeMap[employeeId].monthlyHours[monthKey] = item.avg_work_hours || 0
+    
+    // 累计统计数据（补卡、迟到等应该累计）
+    const stats = employeeMap[employeeId].stats
+    stats.missingCard += item.card_fix_count || 0
+    stats.businessTrip += item.business_trip_days || 0
+    stats.leave += item.leave_days_total || 0
+    stats.late += item.late_count || 0
+    stats.earlyLeave += item.early_leave_count || 0
+    
+    // 累计总工时（使用总工时）
+    employeeMap[employeeId].hours += item.total_work_hours || 0
+  })
+  
+  // 转换为数组并返回
+  return Object.values(employeeMap)
+}
 
 // 计算选择的月份数量
 const selectedMonthCount = computed(() => {
@@ -27,16 +98,20 @@ const selectedMonthCount = computed(() => {
   return endIdx - startIdx + 1
 })
 
-// 验证月份范围是否满足至少6个月的要求
+// 验证月份范围是否满足至少2个月的要求
 const isMonthRangeValid = computed(() => {
-  return selectedMonthCount.value >= 3
+  return selectedMonthCount.value >= 2
 })
 const showNameDropdown = ref(false)
-const showDeptDropdown = ref(false)
 const showMonthDropdown = ref(false)
 
-const allNames = computed(() => [...new Set(data.value.map(i => i.name))].sort())
-const allDepts = computed(() => [...new Set(data.value.map(i => i.dept))].sort())
+// 从已查询的数据中获取所有姓名列表（用于下拉选择）
+const allNames = computed(() => {
+  if (!hasSearched.value || data.value.length === 0) {
+    return []
+  }
+  return [...new Set(data.value.map(i => i.name))].sort()
+})
 
 // 根据选择的月份范围生成月份列表
 const monthKeys = computed(() => {
@@ -48,17 +123,54 @@ const monthKeys = computed(() => {
   return allMonthKeys.slice(startIdx, endIdx + 1)
 })
 
+// 查询报表数据
+const handleQuery = async () => {
+  loading.value = true
+  error.value = null
+  
+  try {
+    const params = {
+      start_month: convertMonthFormat(startMonth.value),
+      end_month: convertMonthFormat(endMonth.value)
+    }
+    
+    // 添加可选参数：姓名列表
+    if (selectedNames.value.length > 0) {
+      params.names = selectedNames.value
+    }
+    
+    // 添加可选参数：部门模糊查询
+    if (departmentInput.value.trim()) {
+      params.department = departmentInput.value.trim()
+    }
+    showToast('查询中...')
+    const result = await queryReportData(params)
+    data.value = normalizeData(result)
+    hasSearched.value = true
+    showToast('查询成功')
+  } catch (err) {
+    error.value = err.message || '查询失败，请稍后重试'
+    showToast('查询失败，请稍后重试', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 过滤后的数据（前端筛选，如果需要的话）
 const filteredData = computed(() => {
-  return data.value.filter(item => {
-    const matchesName = selectedNames.value.length === 0 || selectedNames.value.includes(item.name)
-    const matchesDept = selectedDepts.value.length === 0 || selectedDepts.value.includes(item.dept)
-    return matchesName && matchesDept
-  })
+  if (!hasSearched.value) {
+    return []
+  }
+  return data.value
 })
 
 const columnValues = computed(() => {
   const map = {}
-  monthKeys.value.forEach(m => map[m] = filteredData.value.map(row => row.monthlyHours[m]))
+  monthKeys.value.forEach(m => {
+    map[m] = filteredData.value
+      .map(row => row.monthlyHours[m])
+      .filter(val => val !== undefined && val !== null)
+  })
   return map
 })
 
@@ -93,8 +205,10 @@ const footerStats = computed(() => {
   // 1. 平均工时
   let totalSum = 0, totalCount = 0
   currentData.forEach(d => monthKeys.value.forEach(m => { 
-    totalSum += d.monthlyHours[m]; 
-    totalCount++ 
+    if (d.monthlyHours[m] !== undefined && d.monthlyHours[m] !== null) {
+      totalSum += d.monthlyHours[m]; 
+      totalCount++ 
+    }
   }))
   const avgAll = totalCount > 0 ? (totalSum / totalCount).toFixed(2) : '0.00'
 
@@ -140,8 +254,8 @@ watch([startMonth, endMonth], ([start, end]) => {
   }
   
   const monthCount = endIdx - startIdx + 1
-  if (monthCount < 3) {
-    const newEndIdx = Math.min(startIdx + 2, allMonthKeys.length - 1)
+  if (monthCount < 2) {
+    const newEndIdx = Math.min(startIdx + 1, allMonthKeys.length - 1)
     endMonth.value = allMonthKeys[newEndIdx]
   }
 })
@@ -149,23 +263,13 @@ watch([startMonth, endMonth], ([start, end]) => {
 const toggleNameDropdown = () => {
   const wasOpen = showNameDropdown.value
   showNameDropdown.value = false
-  showDeptDropdown.value = false
   showMonthDropdown.value = false
   showNameDropdown.value = !wasOpen
-}
-
-const toggleDeptDropdown = () => {
-  const wasOpen = showDeptDropdown.value
-  showNameDropdown.value = false
-  showDeptDropdown.value = false
-  showMonthDropdown.value = false
-  showDeptDropdown.value = !wasOpen
 }
 
 const toggleMonthDropdown = () => {
   const wasOpen = showMonthDropdown.value
   showNameDropdown.value = false
-  showDeptDropdown.value = false
   showMonthDropdown.value = false
   showMonthDropdown.value = !wasOpen
 }
@@ -173,7 +277,6 @@ const toggleMonthDropdown = () => {
 const handleClickOutside = (event) => {
   if (!event.target.closest('.dropdown-container')) {
     showNameDropdown.value = false
-    showDeptDropdown.value = false
     showMonthDropdown.value = false
   }
 }
@@ -216,6 +319,9 @@ onUnmounted(() => {
                     class="text-xs text-blue-500 hover:text-blue-600 font-medium transition-colors duration-200 px-2 py-1 rounded-md hover:bg-blue-50">清空</button>
                 </div>
                 <div class="p-2 space-y-1">
+                  <div v-if="allNames.length === 0" class="p-4 text-center text-xs text-gray-400">
+                    请先查询数据以显示姓名列表
+                  </div>
                   <label v-for="name in allNames" :key="name"
                     class="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50/50 cursor-pointer transition-all duration-200 group/item">
                     <input type="checkbox" :value="name" v-model="selectedNames" @click.stop
@@ -230,42 +336,18 @@ onUnmounted(() => {
           </transition>
         </div>
 
-        <!-- 选择所属团队 -->
-        <div class="relative dropdown-container">
-          <button @click.stop="toggleDeptDropdown"
-            class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border relative overflow-hidden group"
-            :class="showDeptDropdown || selectedDepts.length > 0
-              ? 'bg-blue-50/90 hover:bg-blue-50 text-blue-700 border-blue-300/50 shadow-md shadow-blue-500/10 backdrop-blur-sm'
-              : 'bg-white/80 hover:bg-white text-gray-700 border-gray-200/60 hover:border-blue-500/30 hover:shadow-sm backdrop-blur-sm'">
-            <IconFilter class="w-4 h-4 transition-colors duration-300"
-              :class="showDeptDropdown || selectedDepts.length > 0 ? 'text-blue-600' : 'text-gray-500'">
-            </IconFilter>
-            <span>所属团队</span>
-            <IconChevronRight class="w-3 h-3 transition-all duration-300"
-              :class="showDeptDropdown ? 'rotate-90 text-blue-600' : 'text-gray-400'"></IconChevronRight>
-          </button>
-          <transition name="dropdown">
-            <div v-if="showDeptDropdown" @click.stop
-              class="absolute top-full left-0 mt-2 w-48 bg-white/95 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-[0_8px_40px_rgba(0,0,0,0.12)] z-[100] max-h-80 overflow-y-auto custom-scrollbar">
-              <div class="p-2">
-                <div class="flex items-center justify-between p-2 border-b border-gray-100">
-                  <span class="text-xs font-semibold text-gray-500">选择团队</span>
-                  <button @click.stop="selectedDepts = []"
-                    class="text-xs text-blue-500 hover:text-blue-600 font-medium transition-colors duration-200 px-2 py-1 rounded-md hover:bg-blue-50">清空</button>
-                </div>
-                <div class="p-2 space-y-1">
-                  <label v-for="dept in allDepts" :key="dept"
-                    class="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50/50 cursor-pointer transition-all duration-200 group/item">
-                    <input type="checkbox" :value="dept" v-model="selectedDepts" @click.stop
-                      class="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-0 transition-all duration-200 cursor-pointer" />
-                    <span
-                      class="text-sm text-gray-700 group-hover/item:text-blue-700 transition-colors duration-200">{{
-                      dept }}</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </transition>
+        <!-- 部门输入框（模糊查询） -->
+        <div class="relative">
+          <div class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border bg-white/80 hover:bg-white text-gray-700 border-gray-200/60 hover:border-blue-500/30 hover:shadow-sm backdrop-blur-sm">
+            <IconFilter class="w-4 h-4 text-gray-500"></IconFilter>
+            <input 
+              v-model="departmentInput"
+              type="text"
+              placeholder="部门（模糊查询）"
+              class="flex-1 outline-none bg-transparent text-sm text-gray-700 placeholder-gray-400 min-w-[120px]"
+              @keyup.enter="handleQuery"
+            />
+          </div>
         </div>
 
         <!-- 选择月份范围 -->
@@ -318,13 +400,13 @@ onUnmounted(() => {
                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                           <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                         </svg>
-                        满足要求（至少3个月）
+                        满足要求（至少2个月）
                       </span>
                       <span v-else class="flex items-center gap-1">
                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                           <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
                         </svg>
-                        至少需要选择3个月
+                        至少需要选择2个月
                       </span>
                     </div>
                   </div>
@@ -336,14 +418,30 @@ onUnmounted(() => {
 
         <div class="h-8 w-px bg-gray-200/60 transition-opacity duration-300"></div>
 
+        <!-- 查询按钮 -->
+        <button
+          @click="handleQuery"
+          :disabled="loading || !isMonthRangeValid"
+          class="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
+          :class="loading || !isMonthRangeValid
+            ? 'bg-gray-100 text-gray-400 border-gray-200'
+            : 'bg-blue-500 hover:bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30'">
+          <svg v-if="loading" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span v-else>查询</span>
+        </button>
+
         <div
+          v-if="hasSearched"
           class="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50/50 border border-gray-100/50 hover:bg-gray-50 transition-all duration-300 group">
           <div
             class="bg-gray-100/80 p-1.5 rounded-lg text-gray-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all duration-300">
             <IconUsers class="w-4 h-4"></IconUsers>
           </div>
           <div class="flex flex-col">
-            <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">已选人数</span>
+            <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">查询结果</span>
             <span
               class="text-sm font-semibold text-gray-800 group-hover:text-blue-700 transition-colors duration-300">{{
               filteredData.length }} 人</span>
@@ -371,7 +469,16 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-sm">
+    <!-- 错误提示 -->
+    <div v-if="error" class="rounded-xl bg-red-50 border border-red-200 p-4 flex items-center gap-3">
+      <svg class="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+      </svg>
+      <span class="text-sm text-red-700">{{ error }}</span>
+    </div>
+
+    <!-- 数据表格（仅在查询后显示） -->
+    <div v-if="hasSearched && !loading" class="rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-sm">
       <div class="overflow-x-auto custom-scrollbar">
         <table class="min-w-full border-collapse">
           <thead>
@@ -398,7 +505,8 @@ onUnmounted(() => {
                 <span class="px-2 py-0.5 rounded bg-gray-100 text-[11px] border border-gray-200">{{ row.dept }}</span>
               </td>
               <td v-for="m in monthKeys" :key="m" class="px-4 py-2 text-[13px] text-gray-700 border-b border-gray-100 whitespace-nowrap text-center">
-                <div class="py-1 rounded text-[12px]" :class="getCellColor(row.monthlyHours[m], columnValues[m])">{{ row.monthlyHours[m].toFixed(2) }}</div>
+                <div v-if="row.monthlyHours[m] !== undefined && row.monthlyHours[m] !== null" class="py-1 rounded text-[12px]" :class="getCellColor(row.monthlyHours[m], columnValues[m])">{{ row.monthlyHours[m].toFixed(2) }}</div>
+                <div v-else class="py-1 rounded text-[12px] text-gray-400">-</div>
               </td>
               <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{ row.stats.missingCard }}</td>
               <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{ row.stats.businessTrip || '-' }}</td>
@@ -411,7 +519,25 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5 pb-12">
+    <!-- 加载状态 -->
+    <div v-if="loading" class="flex flex-col items-center justify-center py-20">
+      <svg class="animate-spin h-12 w-12 text-blue-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <p class="text-gray-500 text-sm">正在查询数据...</p>
+    </div>
+
+    <!-- 空状态提示 -->
+    <div v-if="hasSearched && !loading && filteredData.length === 0" class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-gray-200">
+      <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <p class="text-gray-500 text-sm">暂无数据，请调整查询条件后重试</p>
+    </div>
+
+    <!-- 统计卡片（仅在查询后显示） -->
+    <div v-if="hasSearched && !loading && filteredData.length > 0" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5 pb-12">
       
       <SummaryCard 
         title="平均工时" 

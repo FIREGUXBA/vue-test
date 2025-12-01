@@ -229,19 +229,19 @@ onMounted(() => {
         <h2 class="text-2xl font-bold text-gray-900 tracking-tight">配置</h2>
         <p class="text-[13px] text-gray-500 mt-1">管理数据源与输出参数</p>
       </div>
-      <div class="flex items-center gap-2 px-3 py-1 bg-white/60 border border-gray-200/60 rounded-full shadow-sm backdrop-blur-md">
-        <div v-if="currentMonth" class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-        <div v-else class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-        <span v-if="currentMonth" class="text-[11px] font-medium text-gray-600">{{currentMonth}}月 · 月份一致</span>
-        <span v-else class="text-[11px] font-medium text-gray-600">月份不一致</span>
-      </div>
     </div>
 
     <!-- Group 1: Data Sources -->
     <div class="bg-white/80 backdrop-blur-md border border-gray-200 shadow-sm rounded-xl overflow-hidden mb-6">
       <!-- Section Header -->
-      <div class="px-4 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center gap-2">
+      <div class="px-4 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between gap-2">
         <span class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">数据源</span>
+        <div class="flex items-center gap-2 px-3 ">
+          <div v-if="currentMonth" class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+          <div v-else class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+          <span v-if="currentMonth" class="text-[11px] font-medium text-gray-600">{{currentMonth}}月 · 月份一致</span>
+          <span v-else class="text-[11px] font-medium text-gray-600">月份不一致</span>
+        </div>
       </div>
       
       <!-- Item 1 -->
@@ -395,7 +395,7 @@ onMounted(() => {
           ]"
         >
           <IconSparkles :class="['w-3.5 h-3.5', { 'animate-spin': isProcessing }]"></IconSparkles>
-          {{ isProcessing ? '处理中...' : '生成报表' }}
+          {{ isProcessing ? '处理中....' : '生成报表' }}
         </button>
         <!-- Tooltip -->
         <Transition name="tooltip">
