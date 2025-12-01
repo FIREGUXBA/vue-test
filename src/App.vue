@@ -6,13 +6,38 @@ import IconChart from './components/icons/IconChart.vue'
 import IconTable from './components/icons/IconTable.vue'
 import IconSave from './components/icons/IconSave.vue'
 import { generateData } from './utils/data'
-
+import ToastNotification from './components/ToastNotification.vue'
 const currentRoute = useRoute()
 
 const data = ref(generateData())
 const filterDept = ref('全部')
 const searchTerm = ref('')
+const toastState = ref({
+  show: false,
+  message: '',
+  type: 'success'
+})
 
+let toastTimer = null
+
+const showToast = (message, type = 'success') => {
+  // 如果已有 Toast，先快速关闭再显示新的（可选，这里直接覆盖）
+  if (toastTimer) clearTimeout(toastTimer)
+  
+  toastState.value = {
+    show: true,
+    message,
+    type
+  }
+
+  // 3秒后自动消失
+  toastTimer = setTimeout(() => {
+    toastState.value.show = false
+  }, 3000)
+}
+
+// [新增] 提供给子组件使用
+provide('showToast', showToast)
 // 通过 provide 共享数据给子组件
 provide('filterDept', filterDept)
 provide('searchTerm', searchTerm)
@@ -30,6 +55,11 @@ const currentView = computed(() => {
 
 <template>
   <div class="min-h-screen pb-20 text-slate-800 selection:bg-blue-100 selection:text-blue-900">
+    <ToastNotification 
+      :show="toastState.show" 
+      :message="toastState.message" 
+      :type="toastState.type" 
+    />
     <main class="max-w-7xl mx-auto px-6 pt-8">
       <!-- 控制栏 -->
       <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">

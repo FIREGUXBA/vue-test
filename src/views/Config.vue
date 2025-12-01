@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, inject } from 'vue'
 import IconFileText from '../components/icons/IconFileText.vue'
 import IconBriefcase from '../components/icons/IconBriefcase.vue'
 import IconSave from '../components/icons/IconSave.vue'
@@ -7,7 +7,7 @@ import IconCalendarDays from '../components/icons/IconCalendarDays.vue'
 import IconChevronDown from '../components/icons/IconChevronDown.vue'
 import IconSparkles from '../components/icons/IconSparkles.vue'
 import { getConfigFiles, saveConfig, getConfig } from '../utils/api/modules/config'
-
+const showToast = inject('showToast')
 //当前选中的月份
 const currentMonth = ref('')
 
@@ -22,6 +22,7 @@ const selectedMonthlyFile = ref('')
 //输出设置
 const outputFile = ref('90001.xlsx')
 const workDays = ref(22)
+const SAVE_TO_DATABASE = ref(false) // 是否保存到数据库，默认false
 
 //获取当前配置
 const getCurrentConfig = async () => {
@@ -31,6 +32,7 @@ const getCurrentConfig = async () => {
     selectedMonthlyFile.value = config.MONTHLY_SUMMARY_FILE
     outputFile.value = config.OUTPUT_FILE
     workDays.value = config.WORK_DAYS
+    SAVE_TO_DATABASE.value = config.SAVE_TO_DATABASE
   } catch (error) {
     console.error('获取当前配置失败:', error)
   }
@@ -88,10 +90,15 @@ const saveConfigFunction = async () => {
       DAILY_STATS_FILE: selectedDailyFile.value,
       MONTHLY_SUMMARY_FILE: selectedMonthlyFile.value,
       OUTPUT_FILE: outputFile.value,
-      WORK_DAYS: workDays.value
+      WORK_DAYS: workDays.value,
+      SAVE_TO_DATABASE: SAVE_TO_DATABASE.value
     })
+    // [新增] 调用弹窗
+    showToast('配置保存成功') 
   } catch (error) {
     console.error('配置保存失败:', error)
+    // [新增] 失败也可以调用
+    showToast('配置保存失败，请重试', 'error')
   }
 }
 
@@ -193,7 +200,7 @@ onMounted(() => {
       </div>
 
       <!-- Item 4 -->
-      <div class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
+      <div class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
         <div class="flex items-center gap-3">
           <div class="w-8 h-8 rounded-lg bg-[#34C759] flex items-center justify-center text-white shadow-sm">
             <IconCalendarDays class="w-4 h-4"></IconCalendarDays>
@@ -204,6 +211,22 @@ onMounted(() => {
           <input type="number" v-model="workDays" class="w-20 text-right bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg px-3 py-1.5 border border-transparent focus:bg-white focus:border-green-500/30 focus:ring-2 focus:ring-green-500/20 transition-all outline-none" />
           <span class="text-[13px] text-gray-400">天</span>
         </div>
+      </div>
+
+      <!-- Item 5: 保存到数据库选项 -->
+      <div class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-[#5856D6] flex items-center justify-center text-white shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+            </svg>
+          </div>
+          <label class="text-[13px] font-medium text-gray-900">保存到数据库</label>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" v-model="SAVE_TO_DATABASE" class="sr-only peer" />
+          <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#007AFF]"></div>
+        </label>
       </div>
     </div>
 
