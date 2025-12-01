@@ -40,3 +40,18 @@ export const saveConfig = (configData) => {
     }
   })
 }
+/**
+ * 重置配置
+ * @returns {Promise}
+ */
+export const resetConfig = () => {
+  return post('/config/reset')
+}
+
+/**
+ * 执行处理
+ * @returns {Promise}
+ */
+export const executeProcessExcel = () => {
+  return post('/config/run')
+}

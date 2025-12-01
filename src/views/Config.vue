@@ -1,12 +1,12 @@
 <script setup>
-import { ref, onMounted, watch, inject } from 'vue'
+import { ref, onMounted, watch, inject, computed } from 'vue'
 import IconFileText from '../components/icons/IconFileText.vue'
 import IconBriefcase from '../components/icons/IconBriefcase.vue'
 import IconSave from '../components/icons/IconSave.vue'
 import IconCalendarDays from '../components/icons/IconCalendarDays.vue'
 import IconChevronDown from '../components/icons/IconChevronDown.vue'
 import IconSparkles from '../components/icons/IconSparkles.vue'
-import { getConfigFiles, saveConfig, getConfig } from '../utils/api/modules/config'
+import { getConfigFiles, saveConfig, getConfig, resetConfig, executeProcessExcel } from '../utils/api/modules/config'
 const showToast = inject('showToast')
 //当前选中的月份
 const currentMonth = ref('')
@@ -24,6 +24,54 @@ const outputFile = ref('90001.xlsx')
 const workDays = ref(22)
 const SAVE_TO_DATABASE = ref(false) // 是否保存到数据库，默认false
 
+// 已保存的配置快照（用于判断是否有未保存的更改）
+const savedConfig = ref({
+  DAILY_STATS_FILE: '',
+  MONTHLY_SUMMARY_FILE: '',
+  OUTPUT_FILE: '',
+  WORK_DAYS: 22,
+  SAVE_TO_DATABASE: false
+})
+
+// 判断是否有未保存的更改
+const hasUnsavedChanges = computed(() => {
+  return (
+    selectedDailyFile.value !== savedConfig.value.DAILY_STATS_FILE ||
+    selectedMonthlyFile.value !== savedConfig.value.MONTHLY_SUMMARY_FILE ||
+    outputFile.value !== savedConfig.value.OUTPUT_FILE ||
+    workDays.value !== savedConfig.value.WORK_DAYS ||
+    SAVE_TO_DATABASE.value !== savedConfig.value.SAVE_TO_DATABASE
+  )
+})
+
+// 判断月份是否一致
+const isMonthConsistent = computed(() => {
+  return !!currentMonth.value
+})
+
+// 判断是否可以生成报表
+const canGenerateReport = computed(() => {
+  return !hasUnsavedChanges.value && isMonthConsistent.value
+})
+
+// 获取错误提示信息
+const errorMessage = computed(() => {
+  if (hasUnsavedChanges.value && !isMonthConsistent.value) {
+    return '请先保存配置，并确保月份一致'
+  } else if (hasUnsavedChanges.value) {
+    return '请先保存配置后再生成报表'
+  } else if (!isMonthConsistent.value) {
+    return '月份不一致，无法生成报表'
+  }
+  return ''
+})
+
+// hover状态
+const showTooltip = ref(false)
+
+// 处理状态
+const isProcessing = ref(false)
+
 //获取当前配置
 const getCurrentConfig = async () => {
   try {
@@ -33,6 +81,14 @@ const getCurrentConfig = async () => {
     outputFile.value = config.OUTPUT_FILE
     workDays.value = config.WORK_DAYS
     SAVE_TO_DATABASE.value = config.SAVE_TO_DATABASE
+    // 更新已保存的配置快照
+    savedConfig.value = {
+      DAILY_STATS_FILE: config.DAILY_STATS_FILE,
+      MONTHLY_SUMMARY_FILE: config.MONTHLY_SUMMARY_FILE,
+      OUTPUT_FILE: config.OUTPUT_FILE,
+      WORK_DAYS: config.WORK_DAYS,
+      SAVE_TO_DATABASE: config.SAVE_TO_DATABASE
+    }
   } catch (error) {
     console.error('获取当前配置失败:', error)
   }
@@ -93,12 +149,56 @@ const saveConfigFunction = async () => {
       WORK_DAYS: workDays.value,
       SAVE_TO_DATABASE: SAVE_TO_DATABASE.value
     })
-    // [新增] 调用弹窗
+    // 更新已保存的配置快照
+    savedConfig.value = {
+      DAILY_STATS_FILE: selectedDailyFile.value,
+      MONTHLY_SUMMARY_FILE: selectedMonthlyFile.value,
+      OUTPUT_FILE: outputFile.value,
+      WORK_DAYS: workDays.value,
+      SAVE_TO_DATABASE: SAVE_TO_DATABASE.value
+    }
     showToast('配置保存成功') 
+    await getCurrentConfig()
+    await loadFiles()
   } catch (error) {
     console.error('配置保存失败:', error)
-    // [新增] 失败也可以调用
     showToast('配置保存失败，请重试', 'error')
+  }
+}
+
+// 重置配置函数
+const resetConfigFunction = async () => {
+  try{
+    await resetConfig()
+    showToast('配置重置成功')
+    await getCurrentConfig()
+    await loadFiles()
+  } catch (error) {
+    console.error('配置重置失败:', error)
+    showToast('配置重置失败，请重试', 'error')
+  }
+}
+
+// 执行处理函数
+const executeProcessExcelFunction = async () => {
+  if (!canGenerateReport.value) {
+    showToast(errorMessage.value, 'error')
+    return
+  }
+  if (isProcessing.value) {
+    return
+  }
+  try{
+    isProcessing.value = true
+    await executeProcessExcel()
+    showToast('处理成功')
+    await getCurrentConfig()
+    await loadFiles()
+  } catch (error) {
+    console.error('处理失败:', error)
+    showToast('处理失败，请重试', 'error')
+  } finally {
+    isProcessing.value = false
   }
 }
 
@@ -232,19 +332,79 @@ onMounted(() => {
 
     <!-- Actions -->
     <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-      <button class="px-4 py-1.5 text-[13px] font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all shadow-sm active:scale-95 active:bg-gray-100">
+      <button 
+        @click="resetConfigFunction" 
+        :disabled="isProcessing"
+        :class="[
+          'px-4 py-1.5 text-[13px] font-medium rounded-lg transition-all shadow-sm',
+          isProcessing
+            ? 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
+            : 'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 active:scale-95 active:bg-gray-100'
+        ]"
+      >
         重置
       </button>
-      <button @click="saveConfigFunction" class="px-4 py-1.5 text-[13px] font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-all shadow-sm active:scale-95 flex items-center gap-1.5 active:bg-gray-100">
+      <button 
+        @click="saveConfigFunction" 
+        :disabled="isProcessing"
+        :class="[
+          'px-4 py-1.5 text-[13px] font-medium rounded-lg transition-all shadow-sm flex items-center gap-1.5',
+          isProcessing
+            ? 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
+            : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-900 active:scale-95 active:bg-gray-100'
+        ]"
+      >
         <IconSave class="w-3.5 h-3.5"></IconSave>
         保存配置
       </button>
       <div class="w-px h-5 bg-gray-300 mx-1"></div>
-      <button class="px-5 py-1.5 text-[13px] font-medium text-white bg-[#007AFF] rounded-lg hover:bg-[#0062CC] shadow-sm transition-all active:scale-95 flex items-center gap-1.5 active:bg-[#0051A8]">
-        <IconSparkles class="w-3.5 h-3.5"></IconSparkles>
-        生成报表
-      </button>
+      <div class="relative" 
+        @mouseenter="showTooltip = true" 
+        @mouseleave="showTooltip = false"
+      >
+        <button 
+          @click="executeProcessExcelFunction" 
+          :disabled="!canGenerateReport || isProcessing"
+          :class="[
+            'px-5 py-1.5 text-[13px] font-medium rounded-lg shadow-sm transition-all flex items-center gap-1.5',
+            canGenerateReport && !isProcessing
+              ? 'text-white bg-[#007AFF] hover:bg-[#0062CC] active:scale-95 active:bg-[#0051A8]' 
+              : 'text-gray-400 bg-gray-200 cursor-not-allowed'
+          ]"
+        >
+          <IconSparkles :class="['w-3.5 h-3.5', { 'animate-spin': isProcessing }]"></IconSparkles>
+          {{ isProcessing ? '处理中...' : '生成报表' }}
+        </button>
+        <!-- Tooltip -->
+        <Transition name="tooltip">
+          <div 
+            v-if="showTooltip && !canGenerateReport && !isProcessing && errorMessage"
+            class="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-[12px] rounded-lg shadow-lg whitespace-nowrap z-50 pointer-events-none"
+          >
+            {{ errorMessage }}
+            <div class="absolute top-full right-6 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-gray-900"></div>
+          </div>
+        </Transition>
+      </div>
     </div>
   </div>
 </template>
 
+<style scoped>
+/* Tooltip 动画 */
+.tooltip-enter-active {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tooltip-leave-active {
+  transition: all 0.15s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.tooltip-enter-from,
+.tooltip-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
+  scale: 0.95;
+  transform-origin: right top;
+}
+</style>
