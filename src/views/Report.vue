@@ -140,7 +140,7 @@ watch([startMonth, endMonth], ([start, end]) => {
   }
   
   const monthCount = endIdx - startIdx + 1
-  if (monthCount < 6) {
+  if (monthCount < 3) {
     const newEndIdx = Math.min(startIdx + 5, allMonthKeys.length - 1)
     endMonth.value = allMonthKeys[newEndIdx]
   }

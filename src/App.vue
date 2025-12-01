@@ -38,14 +38,14 @@ const currentView = computed(() => {
           <div
             class="absolute inset-y-1 bg-white rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 tab-bg z-0 transition-all duration-300"
             :style="{ 
-              left: currentView === 'dashboard' ? '4px' : currentView === 'report' ? 'calc(33.333% + 2px)' : 'calc(66.666% + 2px)', 
-              width: 'calc(33.333% - 4px)' 
+              left: currentView === 'dashboard' ? '4px' : currentView === 'report' ? 'calc(0% + 2px)' : 'calc(50% + 2px)', 
+              width: 'calc(50% - 4px)' 
             }"></div>
-          <router-link to="/dashboard"
+          <!-- <router-link to="/dashboard"
             class="relative z-10 px-4 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-2 w-24 justify-center"
             :class="currentView === 'dashboard' ? 'text-gray-800' : 'text-gray-500 hover:text-gray-600'">
             <IconChart class="w-3.5 h-3.5"></IconChart> 概览
-          </router-link>
+          </router-link> -->
           <router-link to="/report"
             class="relative z-10 px-4 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-2 w-24 justify-center"
             :class="currentView === 'report' ? 'text-gray-800' : 'text-gray-500 hover:text-gray-600'">

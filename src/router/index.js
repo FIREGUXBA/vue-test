@@ -6,7 +6,7 @@ import Config from '../views/Config.vue'
 const routes = [
   {
     path: '/',
-    redirect: '/dashboard'
+    redirect: '/report'
   },
   {
     path: '/dashboard',

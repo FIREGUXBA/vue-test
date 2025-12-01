@@ -1,12 +1,15 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import IconFileText from '../components/icons/IconFileText.vue'
 import IconBriefcase from '../components/icons/IconBriefcase.vue'
 import IconSave from '../components/icons/IconSave.vue'
 import IconCalendarDays from '../components/icons/IconCalendarDays.vue'
 import IconChevronDown from '../components/icons/IconChevronDown.vue'
 import IconSparkles from '../components/icons/IconSparkles.vue'
-import { getConfigFiles } from '../utils/api/modules/config'
+import { getConfigFiles, saveConfig, getConfig } from '../utils/api/modules/config'
+
+//当前选中的月份
+const currentMonth = ref('')
 
 // 文件列表数据
 const dailyFiles = ref([])
@@ -15,6 +18,23 @@ const monthlyFiles = ref([])
 // 选中的文件
 const selectedDailyFile = ref('')
 const selectedMonthlyFile = ref('')
+
+//输出设置
+const outputFile = ref('90001.xlsx')
+const workDays = ref(22)
+
+//获取当前配置
+const getCurrentConfig = async () => {
+  try {
+    const config = await getConfig()
+    selectedDailyFile.value = config.DAILY_STATS_FILE
+    selectedMonthlyFile.value = config.MONTHLY_SUMMARY_FILE
+    outputFile.value = config.OUTPUT_FILE
+    workDays.value = config.WORK_DAYS
+  } catch (error) {
+    console.error('获取当前配置失败:', error)
+  }
+}
 
 // 加载文件列表
 const loadFiles = async () => {
@@ -32,13 +52,57 @@ const loadFiles = async () => {
     if (monthlyFiles.value.length > 0 && !selectedMonthlyFile.value) {
       selectedMonthlyFile.value = monthlyFiles.value[0]
     }
+    
+    // 加载完成后检查月份
+    checkMonth()
   } catch (error) {
     console.error('加载文件列表失败:', error)
   }
 }
 
+//检查月份是否一致并设置当前月份
+const checkMonth = () => {
+  if (selectedDailyFile.value && selectedMonthlyFile.value) {
+    // 从文件名中提取日期部分：杭州安恒信息技术股份有限公司_每日统计_20251001-20251031.xlsx
+    const dailyDatePart = selectedDailyFile.value.split('_')[2]?.replace('.xlsx', '') || ''
+    const monthlyDatePart = selectedMonthlyFile.value.split('_')[2]?.replace('.xlsx', '') || ''
+    
+    // 从日期范围中提取月份（格式：20251001-20251031，月份在第5-6位）
+    const dailyMonth = dailyDatePart.substring(4, 6)
+    const monthlyMonth = monthlyDatePart.substring(4, 6)
+    
+    if (dailyMonth && monthlyMonth && dailyMonth === monthlyMonth) {
+      // 去掉前导零，如 "10" 而不是 "10"，"09" 转为 "9"
+      currentMonth.value = parseInt(dailyMonth, 10).toString()
+      return true
+    }
+  }
+  currentMonth.value = ''
+  return false
+}
+
+// 保存配置函数
+const saveConfigFunction = async () => {
+  try{
+    await saveConfig({
+      DAILY_STATS_FILE: selectedDailyFile.value,
+      MONTHLY_SUMMARY_FILE: selectedMonthlyFile.value,
+      OUTPUT_FILE: outputFile.value,
+      WORK_DAYS: workDays.value
+    })
+  } catch (error) {
+    console.error('配置保存失败:', error)
+  }
+}
+
+// 监听文件选择变化，自动检查月份
+watch([selectedDailyFile, selectedMonthlyFile], () => {
+  checkMonth()
+})
+
 // 组件挂载时加载文件列表
 onMounted(() => {
+  getCurrentConfig()
   loadFiles()
 })
 </script>
@@ -52,8 +116,10 @@ onMounted(() => {
         <p class="text-[13px] text-gray-500 mt-1">管理数据源与输出参数</p>
       </div>
       <div class="flex items-center gap-2 px-3 py-1 bg-white/60 border border-gray-200/60 rounded-full shadow-sm backdrop-blur-md">
-        <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-        <span class="text-[11px] font-medium text-gray-600">10月 · 月份一致</span>
+        <div v-if="currentMonth" class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+        <div v-else class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+        <span v-if="currentMonth" class="text-[11px] font-medium text-gray-600">{{currentMonth}}月 · 月份一致</span>
+        <span v-else class="text-[11px] font-medium text-gray-600">月份不一致</span>
       </div>
     </div>
 
@@ -76,7 +142,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex-1 w-full sm:w-auto relative">
-          <select v-model="selectedDailyFile" class="w-full appearance-none bg-gray-100/50 hover:bg-gray-100 text-gray-700 text-[13px] rounded-lg pl-3 pr-8 py-1.5 border border-transparent focus:bg-white focus:border-blue-500/30 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none cursor-pointer">
+          <select v-model="selectedDailyFile" class="w-full appearance-none bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg pl-3 pr-8 py-1.5 border border-transparent focus:bg-white focus:border-blue-500/30 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none cursor-pointer">
             <option v-for="file in dailyFiles" :key="file" :value="file">{{ file }}</option>
             <option v-if="dailyFiles.length === 0" disabled>暂无文件</option>
           </select>
@@ -98,7 +164,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex-1 w-full sm:w-auto relative">
-          <select v-model="selectedMonthlyFile" class="w-full appearance-none bg-gray-100/50 hover:bg-gray-100 text-gray-700 text-[13px] rounded-lg pl-3 pr-8 py-1.5 border border-transparent focus:bg-white focus:border-purple-500/30 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none cursor-pointer">
+          <select v-model="selectedMonthlyFile" class="w-full appearance-none bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg pl-3 pr-8 py-1.5 border border-transparent focus:bg-white focus:border-purple-500/30 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none cursor-pointer">
             <option v-for="file in monthlyFiles" :key="file" :value="file">{{ file }}</option>
             <option v-if="monthlyFiles.length === 0" disabled>暂无文件</option>
           </select>
@@ -123,7 +189,7 @@ onMounted(() => {
           </div>
           <label class="text-[13px] font-medium text-gray-900">输出文件名</label>
         </div>
-        <input type="text" value="90001.xlsx" class="w-full sm:w-64 text-right bg-transparent border-none focus:ring-0 text-[13px] text-gray-600 focus:text-gray-900 placeholder-gray-400 p-0" />
+        <input type="text" v-model="outputFile" class="w-full sm:w-64 text-right bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg px-3 py-1.5 border border-transparent focus:bg-white focus:border-orange-500/30 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none placeholder-gray-400" />
       </div>
 
       <!-- Item 4 -->
@@ -135,7 +201,7 @@ onMounted(() => {
           <label class="text-[13px] font-medium text-gray-900">标准工作天数</label>
         </div>
         <div class="flex items-center gap-2">
-          <input type="number" value="18" class="w-16 text-right bg-gray-100/50 rounded-md border-0 py-1 px-2 text-[13px] text-gray-900 focus:ring-2 focus:ring-green-500/20 focus:bg-white transition-all" />
+          <input type="number" v-model="workDays" class="w-20 text-right bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg px-3 py-1.5 border border-transparent focus:bg-white focus:border-green-500/30 focus:ring-2 focus:ring-green-500/20 transition-all outline-none" />
           <span class="text-[13px] text-gray-400">天</span>
         </div>
       </div>
@@ -146,7 +212,7 @@ onMounted(() => {
       <button class="px-4 py-1.5 text-[13px] font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all shadow-sm active:scale-95 active:bg-gray-100">
         重置
       </button>
-      <button class="px-4 py-1.5 text-[13px] font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-all shadow-sm active:scale-95 flex items-center gap-1.5 active:bg-gray-100">
+      <button @click="saveConfigFunction" class="px-4 py-1.5 text-[13px] font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-all shadow-sm active:scale-95 flex items-center gap-1.5 active:bg-gray-100">
         <IconSave class="w-3.5 h-3.5"></IconSave>
         保存配置
       </button>
