@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Dashboard from '../views/Dashboard.vue'
+import Dashboard from '../views/Personal.vue'
 import Report from '../views/Report.vue'
 import Config from '../views/Config.vue'
 
@@ -9,8 +9,8 @@ const routes = [
     redirect: '/report'
   },
   {
-    path: '/dashboard',
-    name: 'Dashboard',
+    path: '/personal',
+    name: 'Personal',
     component: Dashboard
   },
   {

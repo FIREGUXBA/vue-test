@@ -49,7 +49,7 @@ provide('data', data)
 const departments = computed(() => ['全部', ...new Set(data.value.map(i => i.dept))])
 
 const currentView = computed(() => {
-  if (currentRoute.path === '/dashboard') return 'dashboard'
+  if (currentRoute.path === '/personal') return 'personal'
   if (currentRoute.path === '/report') return 'report'
   if (currentRoute.path === '/config') return 'config'
   return 'dashboard'
@@ -71,13 +71,13 @@ const currentView = computed(() => {
           <div
             class="absolute inset-y-1 bg-white rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 tab-bg z-0 transition-all duration-300"
             :style="{ 
-              left: currentView === 'dashboard' ? '4px' : currentView === 'report' ? 'calc(33.33% + 2px)' : 'calc(66.66% + 2px)', 
+              left: currentView === 'personal' ? '4px' : currentView === 'report' ? 'calc(33.33% + 2px)' : 'calc(66.66% + 2px)', 
               width: 'calc(33.33% - 4px)' 
             }"></div>
-          <router-link to="/dashboard"
+          <router-link to="/personal"
             class="relative z-10 px-4 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-2 w-24 justify-center"
-            :class="currentView === 'dashboard' ? 'text-gray-800' : 'text-gray-500 hover:text-gray-600'">
-            <IconChart class="w-3.5 h-3.5"></IconChart> 概览
+            :class="currentView === 'personal' ? 'text-gray-800' : 'text-gray-500 hover:text-gray-600'">
+            <IconChart class="w-3.5 h-3.5"></IconChart> 个人
           </router-link>
           <router-link to="/report"
             class="relative z-10 px-4 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-2 w-24 justify-center"
