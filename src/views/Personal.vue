@@ -1,19 +1,174 @@
 <script setup>
-import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
+import { ref, computed, inject, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import IconClock from '../components/icons/IconClock.vue'
 import IconBriefcase from '../components/icons/IconBriefcase.vue'
 import IconCalendar from '../components/icons/IconCalendar.vue'
 import IconCalendarDays from '../components/icons/IconCalendarDays.vue'
 import IconTrendUp from '../components/icons/IconTrendUp.vue'
-import IconChevronDown from '../components/icons/IconChevronDown.vue'
 import IconChevronRight from '../components/icons/IconChevronRight.vue'
 import IconFileText from '../components/icons/IconFileText.vue'
 import { allMonthKeys } from '../utils/data'
+import { queryPersonalData } from '../utils/api/modules/personal'
+import { getUserInfo, getUserInfoField } from '../utils/user'
 
-// 注入全局数据
+// 注入全局数据和方法
 const data = inject('data')
-const currentUser = computed(() => data.value[0] || {})
+const showToast = inject('showToast', () => {})
+
+// 当前用户数据（从API获取）
+const personalData = ref({})
+const loading = ref(false)
+
+// 当前月份
 const currentMonth = ref(allMonthKeys[allMonthKeys.length - 1])
+
+// 获取员工ID（从用户信息中获取）
+const getEmployeeId = () => {
+  // 优先从用户信息中获取 jobNo（员工工号）
+  const jobNo = getUserInfoField('jobNo')
+  if (jobNo) {
+    console.log(jobNo)
+    return jobNo
+  }
+
+  
+  // 如果都没有，返回null
+  console.warn('未找到员工ID，请检查URL参数或用户信息')
+  return null
+}
+
+// 将API返回的数组数据转换为页面需要的格式
+const transformApiData = (apiDataArray) => {
+  const result = {
+    monthlyHours: {},
+    stats: {},
+    employee: null
+  }
+  
+  if (!Array.isArray(apiDataArray)) {
+    return result
+  }
+  
+  // 遍历API返回的数据，按月份组织
+  apiDataArray.forEach(item => {
+    const month = item.period // 格式: "2025-08"
+    
+    // 存储日均工时
+    result.monthlyHours[month] = item.avg_work_hours || 0
+    
+    // 存储该月的统计数据
+    result.stats[month] = {
+      missingCard: item.card_fix_count || 0,
+      businessTrip: item.business_trip_days || 0,
+      compLeave: 0, // API中没有调休字段，设为0
+      leave: item.leave_days_total || 0,
+      late: item.late_count || 0,
+      totalHours: item.total_work_hours || 0,
+      workDays: item.work_days || 0
+    }
+    
+    // 保存员工信息（取第一条）
+    if (!result.employee && item.employee) {
+      result.employee = item.employee
+    }
+  })
+  
+  return result
+}
+
+// 已加载的年份集合（用于避免重复请求）
+const loadedYears = ref(new Set())
+
+// 检查某年份的数据是否已加载
+const hasYearData = (year) => {
+  return loadedYears.value.has(year)
+}
+
+// 获取个人数据（按年份获取）
+const fetchPersonalData = async (year = null) => {
+  const employeeId = getEmployeeId()
+  if (!employeeId) {
+    showToast('未找到员工ID，请先登录', 'error')
+    return
+  }
+  
+  // 如果没有指定年份，使用当前年份
+  const targetYear = year || currentYear.value
+  
+  // 如果该年份的数据已加载，则跳过
+  if (hasYearData(targetYear)) {
+    return
+  }
+  
+  // 获取该年份的所有月份
+  const yearMonths = allMonthKeys.filter(month => month.startsWith(targetYear + '-'))
+  if (yearMonths.length === 0) {
+    showToast('该年份没有可用数据', 'error')
+    return
+  }
+  
+  // 该年份的第一个月和最后一个月
+  const startMonth = yearMonths[0]
+  const endMonth = yearMonths[yearMonths.length - 1]
+  
+  loading.value = true
+  try {
+    const result = await queryPersonalData({
+      start_month: startMonth,
+      end_month: endMonth,
+      employee_id: employeeId
+    })
+    
+    // 转换数据格式（合并到现有数据中，而不是替换）
+    const newData = transformApiData(result)
+    
+    // 合并数据：保留其他年份的数据，更新当前年份的数据
+    personalData.value = {
+      monthlyHours: {
+        ...personalData.value.monthlyHours,
+        ...newData.monthlyHours
+      },
+      stats: {
+        ...personalData.value.stats,
+        ...newData.stats
+      },
+      employee: newData.employee || personalData.value.employee
+    }
+    
+    // 标记该年份已加载
+    loadedYears.value.add(targetYear)
+  } catch (error) {
+    console.error('获取个人数据失败:', error)
+    showToast('获取个人数据失败', 'error')
+    // 如果还没有任何数据，初始化空数据
+    if (!personalData.value.monthlyHours || Object.keys(personalData.value.monthlyHours).length === 0) {
+      personalData.value = {
+        monthlyHours: {},
+        stats: {},
+        employee: null
+      }
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+// 当前用户数据（兼容原有代码结构）
+const currentUser = computed(() => {
+  const monthStats = personalData.value.stats?.[currentMonth.value] || {}
+  
+  return {
+    monthlyHours: personalData.value.monthlyHours || {},
+    stats: {
+      missingCard: monthStats.missingCard || 0,
+      businessTrip: monthStats.businessTrip || 0,
+      compLeave: monthStats.compLeave || 0,
+      leave: monthStats.leave || 0,
+      late: monthStats.late || 0
+    },
+    employee: personalData.value.employee || {}
+  }
+})
 
 // 容器宽度和月份显示数量
 const trendContainerRef = ref(null)
@@ -45,7 +200,7 @@ const currentYearMonths = computed(() => {
 })
 
 // 切换年份
-const changeYear = (direction) => {
+const changeYear = async (direction) => {
   const targetYear = direction === 'prev' ? currentYear.value - 1 : currentYear.value + 1
   const targetYearMonths = allMonthKeys.filter(month => month.startsWith(targetYear + '-'))
   
@@ -65,6 +220,11 @@ const changeYear = (direction) => {
     }
     
     currentMonth.value = targetMonth
+    
+    // 如果目标年份的数据未加载，则获取该年份的数据
+    if (!hasYearData(targetYear)) {
+      await fetchPersonalData(targetYear)
+    }
   }
 }
 
@@ -118,8 +278,11 @@ const isMounted = ref(false)
 
 // 计算核心数据
 const monthData = computed(() => {
+  // 从API数据中获取当前月份的数据
+  const monthStats = personalData.value.stats?.[currentMonth.value] || {}
   const avgDaily = currentUser.value.monthlyHours?.[currentMonth.value] || 0
-  const totalHours = avgDaily * STANDARD_WORK_DAYS
+  // API返回的total_work_hours已经是总工时，不需要再乘以天数
+  const totalHours = monthStats.totalHours || (avgDaily * STANDARD_WORK_DAYS)
   const standardTotalHours = STANDARD_WORK_DAYS * STANDARD_DAILY_HOURS
   
   // 达成率百分比
@@ -141,8 +304,8 @@ const monthData = computed(() => {
   const standardTotalPercent = (standardTotalHours / maxTotalHours) * 100
 
   return {
-    avgDaily: avgDaily.toFixed(1),
-    totalHours: totalHours.toFixed(1),
+    avgDaily: avgDaily.toFixed(2),
+    totalHours: totalHours.toFixed(2),
     standardDays: STANDARD_WORK_DAYS,
     standardTotalHours: standardTotalHours,
     maxTotalHours: maxTotalHours,
@@ -245,40 +408,68 @@ const getColorClass = (color) => {
 // ResizeObserver 实例
 let resizeObserver = null
 
+// 监听年份变化，如果切换到新年份且数据未加载，则获取数据
+watch(currentYear, async (newYear, oldYear) => {
+  if (newYear !== oldYear && !hasYearData(newYear)) {
+    await fetchPersonalData(newYear)
+  }
+})
+
+// 监听 loading 状态，当数据加载完成后初始化容器宽度
+watch(loading, (newLoading) => {
+  if (!newLoading) {
+    // 数据加载完成，等待 DOM 渲染后再初始化
+    nextTick(() => {
+      setTimeout(() => {
+        if (trendContainerRef.value) {
+          const width = trendContainerRef.value.offsetWidth
+          if (width > 0) {
+            containerWidth.value = width
+            
+            // 使用 ResizeObserver 监听宽度变化
+            if (typeof ResizeObserver !== 'undefined') {
+              if (resizeObserver) {
+                resizeObserver.disconnect()
+              }
+              resizeObserver = new ResizeObserver(entries => {
+                for (const entry of entries) {
+                  const newWidth = entry.contentRect.width
+                  if (newWidth > 0) {
+                    containerWidth.value = newWidth
+                  }
+                }
+              })
+              resizeObserver.observe(trendContainerRef.value)
+            } else {
+              // 降级方案：使用 window resize 事件
+              const handleResize = () => {
+                if (trendContainerRef.value) {
+                  const newWidth = trendContainerRef.value.offsetWidth
+                  if (newWidth > 0) {
+                    containerWidth.value = newWidth
+                  }
+                }
+              }
+              window.addEventListener('resize', handleResize)
+              onUnmounted(() => {
+                window.removeEventListener('resize', handleResize)
+              })
+            }
+          }
+        }
+      }, 100)
+    })
+  }
+}, { immediate: true })
+
 onMounted(() => {
+  // 获取当前年份的个人数据
+  fetchPersonalData(currentYear.value)
+  
   // 稍微延迟触发动画，确保 DOM 渲染完成
   setTimeout(() => {
     isMounted.value = true
   }, 100)
-  
-  // 延迟初始化容器宽度监听，确保 DOM 完全渲染
-  setTimeout(() => {
-    if (trendContainerRef.value) {
-      // 初始化宽度
-      containerWidth.value = trendContainerRef.value.offsetWidth
-      
-      // 使用 ResizeObserver 监听宽度变化
-      if (typeof ResizeObserver !== 'undefined') {
-        resizeObserver = new ResizeObserver(entries => {
-          for (const entry of entries) {
-            containerWidth.value = entry.contentRect.width
-          }
-        })
-        resizeObserver.observe(trendContainerRef.value)
-      } else {
-        // 降级方案：使用 window resize 事件
-        const handleResize = () => {
-          if (trendContainerRef.value) {
-            containerWidth.value = trendContainerRef.value.offsetWidth
-          }
-        }
-        window.addEventListener('resize', handleResize)
-        onUnmounted(() => {
-          window.removeEventListener('resize', handleResize)
-        })
-      }
-    }
-  }, 150)
 })
 
 onUnmounted(() => {
@@ -292,7 +483,16 @@ onUnmounted(() => {
 
 <template>
   <div class="max-w-5xl mx-auto pb-12">
+    <!-- 加载状态 -->
+    <div v-if="loading" class="flex items-center justify-center py-20">
+      <div class="flex flex-col items-center gap-3">
+        <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <p class="text-sm text-gray-500">正在加载数据...</p>
+      </div>
+    </div>
     
+    <!-- 主要内容 -->
+    <div v-else>
     <div class="flex justify-between items-end mb-8 px-1 animate-enter" style="--stagger: 0">
       <div>
         <h2 class="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
@@ -327,7 +527,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="bg-white/60 backdrop-blur-xl border border-white/60 rounded-[20px] p-1.5 shadow-sm mb-5 animate-enter" style="--stagger: 0.5" ref="trendContainerRef">
+    <div class=" rounded-[20px] p-1.5 mb-5 animate-enter" style="--stagger: 0.5" ref="trendContainerRef">
       <div class="flex items-center gap-2">
         <button
           @click="changeMonth('prev')"
@@ -345,8 +545,8 @@ onUnmounted(() => {
             :class="item.isCurrent 
               ? 'bg-transparent shadow-lg shadow-blue-200/50 text-blue-700 ring-2 ring-blue-400/50 border border-blue-300/30 scale-105' 
               : 'bg-transparent hover:bg-blue-50/60 hover:shadow-md hover:shadow-blue-200/30 hover:ring-1 hover:ring-blue-300/40 hover:scale-105 text-gray-600 hover:text-blue-600'">
-            <div v-if="item.isCurrent"
-              class="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-1.5 bg-blue-500 rounded-t-full shadow-sm"></div>
+            <!-- <div v-if="item.isCurrent"
+              class="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-1.5 bg-blue-500 rounded-t-full shadow-sm"></div> -->
             <span class="text-xs font-bold transition-colors duration-300" :class="item.isCurrent ? 'text-blue-700' : 'group-hover:text-blue-600'">{{ item.label }}</span>
             <div class="h-8 w-1.5 bg-gray-200 rounded-full flex items-end overflow-hidden shadow-inner">
               <div class="w-full rounded-full transition-all duration-500"
@@ -527,7 +727,8 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-
+    </div>
+    <!-- 结束主要内容 -->
   </div>
 </template>
 

@@ -94,6 +94,19 @@ const getBadgeStyle = (idx) => {
   return null
 }
 
+// 格式化数值，保留2位小数（仅对工时单位 'h' 格式化）
+const formatValue = (value, unit = '') => {
+  if (typeof value === 'number') {
+    // 如果是工时单位（'h' 或 '小时'），格式化为2位小数字符串
+    if (unit === 'h' || unit === '小时') {
+      return value.toFixed(2)
+    }
+    // 其他单位保持原样
+    return value
+  }
+  return value
+}
+
 // 处理列表数据，截取前 N 名
 const listData = computed(() => {
   if (Array.isArray(props.data)) {
@@ -124,7 +137,7 @@ const listData = computed(() => {
       <div v-if="type === 'single'" class="flex flex-col h-full justify-center pb-4 pl-1">
         <div class="flex items-baseline gap-1.5">
           <span class="text-[44px] font-bold text-slate-800 tracking-tight font-sf-display leading-none">
-            {{ data.value }}
+            {{ formatValue(data.value, data.unit) }}
           </span>
           <span class="text-sm font-medium text-gray-400 uppercase tracking-wide">{{ data.unit }}</span>
         </div>
@@ -163,7 +176,7 @@ const listData = computed(() => {
                 class="text-[13px] font-bold font-mono tracking-tight tabular-nums text-right"
                 :class="idx < 3 ? 'text-slate-800' : 'text-slate-500'"
               >
-                {{ item.value }}
+                {{ formatValue(item.value, item.unit) }}
               </span>
               <span class="text-[10px] text-gray-400 scale-90 origin-left">{{ item.unit }}</span>
             </div>

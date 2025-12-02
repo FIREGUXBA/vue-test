@@ -32,6 +32,9 @@ const departmentInput = ref('') // 部门输入框（模糊查询）
 const startMonth = ref('')
 const endMonth = ref('')
 
+// 工时显示模式切换：true 显示总工时，false 显示平均工时
+const showTotalHours = ref(false)
+
 // 从 API 返回的数据格式转换为内部格式
 const normalizeData = (apiData) => {
   if (!Array.isArray(apiData) || apiData.length === 0) {
@@ -52,6 +55,7 @@ const normalizeData = (apiData) => {
         name: employee.name || '',
         dept: employee.second_level_dept || employee.third_level_dept || '',
         monthlyHours: {},
+        monthlyTotalHours: {},
         stats: {
           missingCard: 0,
           businessTrip: 0,
@@ -67,7 +71,7 @@ const normalizeData = (apiData) => {
     // 直接使用 period 作为月份键
     const monthKey = item.period
     employeeMap[employeeId].monthlyHours[monthKey] = item.avg_work_hours || 0
-
+    employeeMap[employeeId].monthlyTotalHours[monthKey] = item.total_work_hours || 0
     // 累计统计数据（补卡、迟到等应该累计）
     const stats = employeeMap[employeeId].stats
     stats.missingCard += item.card_fix_count || 0
@@ -147,6 +151,7 @@ const handleQuery = async () => {
     const result = await queryReportData(params)
     data.value = normalizeData(result)
     hasSearched.value = true
+    // console.log(data.value)
     showToast('查询成功', 'success')
   } catch (err) {
     showToast('查询失败，请稍后重试', 'error')
@@ -155,14 +160,20 @@ const handleQuery = async () => {
   }
 }
 
+// 根据切换状态获取当前使用的工时数据字段
+const currentHoursField = computed(() => {
+  return showTotalHours.value ? 'monthlyTotalHours' : 'monthlyHours'
+})
+
 const columnValues = computed(() => {
   if (!hasSearched.value || !data.value || data.value.length === 0) {
     return {}
   }
   const map = {}
+  const field = currentHoursField.value
   monthKeys.value.forEach(m => {
     map[m] = data.value
-      .map(row => row.monthlyHours[m])
+      .map(row => row[field][m])
       .filter(val => val !== undefined && val !== null)
   })
   return map
@@ -198,19 +209,47 @@ const footerStats = computed(() => {
       })
   }
 
-  // 1. 平均工时
+  // 1. 平均工时（根据切换状态计算）
   let totalSum = 0, totalCount = 0
+  const field = currentHoursField.value
   currentData.forEach(d => monthKeys.value.forEach(m => {
-    if (d.monthlyHours[m] !== undefined && d.monthlyHours[m] !== null) {
-      totalSum += d.monthlyHours[m];
+    if (d[field][m] !== undefined && d[field][m] !== null) {
+      totalSum += d[field][m];
       totalCount++
     }
   }))
   const avgAll = totalCount > 0 ? (totalSum / totalCount).toFixed(2) : '0.00'
 
   // 2. 各类排行
-  const topHours = getRanking((a, b) => b.hours - a.hours, 'hours', 'h')
-  const bottomHours = getRanking((a, b) => a.hours - b.hours, 'hours', 'h')
+  // 工时投入榜和工时不足榜始终根据总工时（monthlyTotalHours）计算
+  const getTotalHoursSum = (employee) => {
+    return monthKeys.value.reduce((sum, m) => {
+      const val = employee.monthlyTotalHours[m]
+      return sum + (val !== undefined && val !== null ? val : 0)
+    }, 0)
+  }
+  
+  const topHours = [...currentData]
+    .map(d => ({ ...d, totalHoursSum: getTotalHoursSum(d) }))
+    .sort((a, b) => b.totalHoursSum - a.totalHoursSum)
+    .slice(0, 5)
+    .map(i => ({
+      name: i.name,
+      dept: i.dept,
+      value: parseFloat(i.totalHoursSum.toFixed(2)),
+      unit: 'h'
+    }))
+  
+  const bottomHours = [...currentData]
+    .map(d => ({ ...d, totalHoursSum: getTotalHoursSum(d) }))
+    .sort((a, b) => a.totalHoursSum - b.totalHoursSum)
+    .slice(0, 5)
+    .map(i => ({
+      name: i.name,
+      dept: i.dept,
+      value: parseFloat(i.totalHoursSum.toFixed(2)),
+      unit: 'h'
+    }))
 
   const topMissing = [...currentData]
     .sort((a, b) => b.stats.missingCard - a.stats.missingCard)
@@ -450,6 +489,29 @@ onUnmounted(() => {
 
         <div class="h-7 w-px bg-gray-200 transition-opacity duration-300"></div>
 
+        <!-- 工时显示模式切换 -->
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-200/50 hover:bg-gray-200 border border-transparent hover:border-blue-500/30 transition-all duration-300">
+          <span class="text-[13px] font-medium text-gray-700">显示模式：</span>
+          <button
+            @click="showTotalHours = false"
+            class="px-3 py-1 rounded-md text-[12px] font-medium transition-all duration-200"
+            :class="!showTotalHours
+              ? 'bg-blue-500 text-white shadow-sm'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
+            平均工时
+          </button>
+          <button
+            @click="showTotalHours = true"
+            class="px-3 py-1 rounded-md text-[12px] font-medium transition-all duration-200"
+            :class="showTotalHours
+              ? 'bg-blue-500 text-white shadow-sm'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
+            总工时
+          </button>
+        </div>
+
+        <div class="h-7 w-px bg-gray-200 transition-opacity duration-300"></div>
+
         <!-- 查询按钮 -->
         <button @click="handleQuery" :disabled="loading || !isMonthRangeValid"
           class="flex items-center px-5 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-300 border relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
@@ -526,7 +588,7 @@ onUnmounted(() => {
                 class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center min-w-[90px]">
                 <div class="flex flex-col">
                   <span class="text-gray-800">{{ m }}</span>
-                  <span class="text-[9px] font-normal text-gray-400 mt-0.5">平均工时</span>
+                  <span class="text-[9px] font-normal text-gray-400 mt-0.5">{{ showTotalHours ? '总工时' : '平均工时' }}</span>
                 </div>
               </th>
               <th
@@ -556,9 +618,9 @@ onUnmounted(() => {
               </td>
               <td v-for="m in monthKeys" :key="m"
                 class="px-4 py-3 text-[13px] text-gray-700 border-b border-gray-100 whitespace-nowrap text-center">
-                <div v-if="row.monthlyHours[m] !== undefined && row.monthlyHours[m] !== null"
-                  class="py-1 rounded text-[12px]" :class="getCellColor(row.monthlyHours[m], columnValues[m])">{{
-                    row.monthlyHours[m].toFixed(2) }}</div>
+                <div v-if="row[currentHoursField][m] !== undefined && row[currentHoursField][m] !== null"
+                  class="py-1 rounded text-[12px]" :class="getCellColor(row[currentHoursField][m], columnValues[m])">{{
+                    row[currentHoursField][m].toFixed(2) }}</div>
                 <div v-else class="py-1 rounded text-[12px] text-gray-400">-</div>
               </td>
               <td class="px-4 py-3 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
@@ -593,7 +655,7 @@ onUnmounted(() => {
     <div v-if="hasSearched && !loading && data.length > 0"
       class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5 pb-12">
 
-      <SummaryCard title="平均工时" type="single" color="green" :icon="IconChart"
+      <SummaryCard :title="showTotalHours ? '平均总工时' : '平均工时'" type="single" color="green" :icon="IconChart"
         :data="{ value: footerStats.avgAll, unit: '小时', subtitle: '' }" />
 
       <SummaryCard title="工时投入榜" type="list" color="blue" :limit="5" :icon="IconTrendUp" :data="footerStats.topHours" />

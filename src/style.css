@@ -16,8 +16,8 @@ body {
 
 /* 1. 页面切换 */
 .page-enter-active, .page-leave-active { transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
-.page-enter-from { opacity: 0; transform: translateY(10px) scale(0.98); filter: blur(4px); }
-.page-leave-to { opacity: 0; transform: translateY(-10px) scale(0.98); filter: blur(4px); }
+.page-enter-from { opacity: 0; transform: translateY(10px) scale(0.98); }
+.page-leave-to { opacity: 0; transform: translateY(-10px) scale(0.98); }
 
 /* 2. 列表筛选动画 (FLIP) */
 .list-move, 
@@ -55,10 +55,10 @@ body {
 
 /* 7. 动画关键帧 */
 @keyframes fadeInUp {
-  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.card-enter-from { opacity: 0; transform: translateY(20px); filter: blur(10px); }
+.card-enter-from { opacity: 0; transform: translateY(20px); }
 
 /* 8. 下拉菜单动画 */
 .dropdown-enter-active {
@@ -70,12 +70,10 @@ body {
 .dropdown-enter-from {
   opacity: 0;
   transform: translateY(-8px) scale(0.96);
-  filter: blur(4px);
 }
 .dropdown-leave-to {
   opacity: 0;
   transform: translateY(-4px) scale(0.98);
-  filter: blur(2px);
 }
 
 /* 9. 徽章动画 */

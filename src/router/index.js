@@ -2,11 +2,12 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Dashboard from '../views/Personal.vue'
 import Report from '../views/Report.vue'
 import Config from '../views/Config.vue'
+import { initUserInfoFromURL } from '../utils/user'
 
 const routes = [
   {
     path: '/',
-    redirect: '/report'
+    redirect: '/personal'
   },
   {
     path: '/personal',
@@ -29,6 +30,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes
 })
+
 
 export default router
 

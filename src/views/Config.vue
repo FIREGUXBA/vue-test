@@ -20,7 +20,6 @@ const selectedDailyFile = ref('')
 const selectedMonthlyFile = ref('')
 
 //输出设置
-const outputFile = ref('90001.xlsx')
 const workDays = ref(22)
 const SAVE_TO_DATABASE = ref(false) // 是否保存到数据库，默认false
 const OVER_WRITE = ref(false) // 是否覆盖已有数据，默认false
@@ -29,7 +28,6 @@ const OVER_WRITE = ref(false) // 是否覆盖已有数据，默认false
 const savedConfig = ref({
   DAILY_STATS_FILE: '',
   MONTHLY_SUMMARY_FILE: '',
-  OUTPUT_FILE: '',
   WORK_DAYS: 22,
   SAVE_TO_DATABASE: false,
   OVER_WRITE: false
@@ -40,7 +38,6 @@ const hasUnsavedChanges = computed(() => {
   return (
     selectedDailyFile.value !== savedConfig.value.DAILY_STATS_FILE ||
     selectedMonthlyFile.value !== savedConfig.value.MONTHLY_SUMMARY_FILE ||
-    outputFile.value !== savedConfig.value.OUTPUT_FILE ||
     workDays.value !== savedConfig.value.WORK_DAYS ||
     SAVE_TO_DATABASE.value !== savedConfig.value.SAVE_TO_DATABASE ||
     OVER_WRITE.value !== savedConfig.value.OVER_WRITE
@@ -86,7 +83,6 @@ const getCurrentConfig = async () => {
     const config = await getConfig()
     selectedDailyFile.value = config.DAILY_STATS_FILE
     selectedMonthlyFile.value = config.MONTHLY_SUMMARY_FILE
-    outputFile.value = config.OUTPUT_FILE
     workDays.value = config.WORK_DAYS
     SAVE_TO_DATABASE.value = config.SAVE_TO_DATABASE
     OVER_WRITE.value = config.OVER_WRITE
@@ -94,7 +90,6 @@ const getCurrentConfig = async () => {
     savedConfig.value = {
       DAILY_STATS_FILE: config.DAILY_STATS_FILE,
       MONTHLY_SUMMARY_FILE: config.MONTHLY_SUMMARY_FILE,
-      OUTPUT_FILE: config.OUTPUT_FILE,
       WORK_DAYS: config.WORK_DAYS,
       SAVE_TO_DATABASE: config.SAVE_TO_DATABASE,
       OVER_WRITE: config.OVER_WRITE
@@ -155,7 +150,6 @@ const saveConfigFunction = async () => {
     await saveConfig({
       DAILY_STATS_FILE: selectedDailyFile.value,
       MONTHLY_SUMMARY_FILE: selectedMonthlyFile.value,
-      OUTPUT_FILE: outputFile.value,
       WORK_DAYS: workDays.value,
       SAVE_TO_DATABASE: SAVE_TO_DATABASE.value,
       OVER_WRITE: OVER_WRITE.value
@@ -164,7 +158,6 @@ const saveConfigFunction = async () => {
     savedConfig.value = {
       DAILY_STATS_FILE: selectedDailyFile.value,
       MONTHLY_SUMMARY_FILE: selectedMonthlyFile.value,
-      OUTPUT_FILE: outputFile.value,
       WORK_DAYS: workDays.value,
       SAVE_TO_DATABASE: SAVE_TO_DATABASE.value,
       OVER_WRITE: OVER_WRITE.value
@@ -426,7 +419,7 @@ onMounted(() => {
 
 
       <!-- Item 3 -->
-      <div class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 hover:bg-gray-50 transition-colors">
+      <!-- <div class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 hover:bg-gray-50 transition-colors">
         <div class="flex items-center gap-3">
           <div class="w-8 h-8 rounded-lg bg-[#FF9500] flex items-center justify-center text-white shadow-sm">
             <IconSave class="w-4 h-4"></IconSave>
@@ -434,7 +427,7 @@ onMounted(() => {
           <label class="text-[13px] font-medium text-gray-900">输出文件名</label>
         </div>
         <input type="text" v-model="outputFile" class="w-full sm:w-64 text-right bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg px-3 py-1.5 border border-transparent focus:bg-white focus:border-orange-500/30 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none placeholder-gray-400" />
-      </div>
+      </div> -->
 
       <!-- Item 4 -->
       <div class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
