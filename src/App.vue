@@ -24,13 +24,18 @@ const showToast = (message, type = 'success') => {
   // 如果已有 Toast，先快速关闭再显示新的（可选，这里直接覆盖）
   if (toastTimer) clearTimeout(toastTimer)
   
-  toastState.value = {
-    show: true,
-    message,
-    type
-  }
+  // 先设置为 false，然后立即设置为 true，确保 watch 能够触发
+  toastState.value.show = false
+  // 使用 nextTick 确保在下一个 tick 设置，触发 watch
+  setTimeout(() => {
+    toastState.value = {
+      show: true,
+      message,
+      type
+    }
+  }, 10)
 
-  // 3秒后自动消失
+  // 3秒后自动消失（这个时间现在由组件内部管理，但保留以防需要）
   toastTimer = setTimeout(() => {
     toastState.value.show = false
   }, 3000)
