@@ -1,4 +1,4 @@
-import { get, post, put, del } from '../request'
+import { get, post, put, del, upload } from '../request'
 
 /**
  * 获取文件列表
@@ -54,4 +54,15 @@ export const resetConfig = () => {
  */
 export const executeProcessExcel = () => {
   return post('/config/run')
+}
+
+/**
+ * 上传文件
+ * @param {File} file - 要上传的文件
+ * @returns {Promise}
+ */
+export const uploadFile = (file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return upload('/config/upload', formData)
 }

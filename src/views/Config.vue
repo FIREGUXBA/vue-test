@@ -6,7 +6,7 @@ import IconSave from '../components/icons/IconSave.vue'
 import IconCalendarDays from '../components/icons/IconCalendarDays.vue'
 import IconChevronDown from '../components/icons/IconChevronDown.vue'
 import IconSparkles from '../components/icons/IconSparkles.vue'
-import { getConfigFiles, saveConfig, getConfig, resetConfig, executeProcessExcel } from '../utils/api/modules/config'
+import { getConfigFiles, saveConfig, getConfig, resetConfig, executeProcessExcel, uploadFile } from '../utils/api/modules/config'
 const showToast = inject('showToast')
 //当前选中的月份
 const currentMonth = ref('')
@@ -74,6 +74,11 @@ const showTooltip = ref(false)
 
 // 处理状态
 const isProcessing = ref(false)
+
+// 文件上传相关状态
+const isDragging = ref(false)
+const isUploading = ref(false)
+const fileInputRef = ref(null)
 
 //获取当前配置
 const getCurrentConfig = async () => {
@@ -209,6 +214,75 @@ const executeProcessExcelFunction = async () => {
   }
 }
 
+// 处理文件上传
+const handleFileChange = async (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
+  
+  // 验证文件类型
+  if (!file.name.endsWith('.xlsx')) {
+    showToast('请上传 .xlsx 格式的文件', 'error')
+    return
+  }
+  
+  await uploadFileHandler(file)
+}
+
+// 文件上传处理函数
+const uploadFileHandler = async (file) => {
+  try {
+    isUploading.value = true
+    await uploadFile(file)
+    showToast('文件上传成功')
+    // 重新加载文件列表
+    await loadFiles()
+  } catch (error) {
+    console.error('文件上传失败:', error)
+    showToast('文件上传失败，请重试', 'error')
+  } finally {
+    isUploading.value = false
+    // 清空 input 值，以便可以重复选择同一文件
+    if (fileInputRef.value) {
+      fileInputRef.value.value = ''
+    }
+  }
+}
+
+// 处理拖拽事件
+const handleDragOver = (event) => {
+  event.preventDefault()
+  event.stopPropagation()
+  isDragging.value = true
+}
+
+const handleDragLeave = (event) => {
+  event.preventDefault()
+  event.stopPropagation()
+  isDragging.value = false
+}
+
+const handleDrop = async (event) => {
+  event.preventDefault()
+  event.stopPropagation()
+  isDragging.value = false
+  
+  const file = event.dataTransfer.files?.[0]
+  if (!file) return
+  
+  // 验证文件类型
+  if (!file.name.endsWith('.xlsx')) {
+    showToast('请上传 .xlsx 格式的文件', 'error')
+    return
+  }
+  
+  await uploadFileHandler(file)
+}
+
+// 点击上传区域触发文件选择
+const handleClickUpload = () => {
+  fileInputRef.value?.click()
+}
+
 // 监听文件选择变化，自动检查月份
 watch([selectedDailyFile, selectedMonthlyFile], () => {
   checkMonth()
@@ -230,15 +304,73 @@ onMounted(() => {
         <p class="text-[13px] text-gray-500 mt-1">管理数据源与输出参数</p>
       </div>
     </div>
+    
+    <!-- Upload Section (macOS style well) -->
+    <!-- 使用 bg-white 但带有更细腻的阴影，模仿 macOS 的分组 -->
+    <div class="bg-white border border-gray-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.03)] rounded-xl overflow-hidden mb-6">
+      
+      <div class="p-1.5">
+        <input 
+          ref="fileInputRef"
+          id="fileInput" 
+          type="file" 
+          @change="handleFileChange" 
+          class="hidden" 
+          accept=".xlsx"
+          :disabled="isUploading"
+        >
+        <div 
+          @click="handleClickUpload"
+          @dragover="handleDragOver"
+          @dragleave="handleDragLeave"
+          @drop="handleDrop"
+          :class="[
+            'relative w-full min-h-[140px] flex flex-col items-center justify-center rounded-lg transition-all duration-300 ease-out cursor-pointer',
+            isDragging 
+              ? 'bg-[#007AFF]/10 border-2 border-[#007AFF] shadow-inner' 
+              : 'bg-gray-50/50 hover:bg-gray-100/70 border border-gray-200/60 hover:border-gray-300/60',
+            isUploading && 'opacity-70 pointer-events-none cursor-not-allowed'
+          ]"
+        >
+          <!-- Content Container -->
+          <div class="relative z-10 flex flex-col items-center text-center p-4">
+            
+            <!-- Icon -->
+            <div :class="[
+              'mb-3 transition-transform duration-300',
+              isDragging ? 'scale-110' : ''
+            ]">
+               <svg v-if="isUploading" class="w-10 h-10 animate-spin text-[#007AFF]" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+               </svg>
+               <!-- macOS style cloud upload icon -->
+               <svg v-else class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+               </svg>
+            </div>
 
-    <!-- Group 1: Data Sources -->
-    <div class="bg-white/80 backdrop-blur-md border border-gray-200 shadow-sm rounded-xl overflow-hidden mb-6">
+            <!-- Text -->
+            <div class="space-y-1">
+               <h3 class="text-[14px] font-semibold text-gray-700">
+                 {{ isUploading ? '正在导入...' : isDragging ? '松开以上传' : '拖拽或点击上传文件' }}
+               </h3>
+               <p class="text-[12px] text-gray-400 font-medium">
+                 支持 .xlsx 格式
+               </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group 1: Data Sources Selection -->
+    <div class="bg-white/80 border border-gray-200 shadow-sm rounded-xl overflow-hidden mb-6">
       <!-- Section Header -->
-      <div class="px-4 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between gap-2">
-        <span class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">数据源</span>
+      <div class="px-4 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center justify-end gap-2">
         <div class="flex items-center gap-2 px-3 ">
-          <div v-if="currentMonth" class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-          <div v-else class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+          <div v-if="currentMonth" class="w-2 h-2 rounded-full bg-green-500 "></div>
+          <div v-else class="w-2 h-2 rounded-full bg-red-500 "></div>
           <span v-if="currentMonth" class="text-[11px] font-medium text-gray-600">{{currentMonth}}月 · 月份一致</span>
           <span v-else class="text-[11px] font-medium text-gray-600">月份不一致</span>
         </div>
@@ -290,10 +422,8 @@ onMounted(() => {
     </div>
 
     <!-- Group 2: Output -->
-    <div class="bg-white/80 backdrop-blur-md border border-gray-200 shadow-sm rounded-xl overflow-hidden mb-8">
-      <div class="px-4 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center gap-2">
-        <span class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">输出设置</span>
-      </div>
+    <div class="bg-white/80  border border-gray-200 shadow-sm rounded-xl overflow-hidden mb-1">
+
 
       <!-- Item 3 -->
       <div class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 hover:bg-gray-50 transition-colors">
@@ -338,12 +468,18 @@ onMounted(() => {
       <!-- Item 6: 覆盖选项 -->
       <div v-if="SAVE_TO_DATABASE" class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
         <div class="flex items-center gap-3">
-          <div class="w-8 h-8 rounded-lg bg-[#FF3B30] flex items-center justify-center text-white shadow-sm">
+          <div v-if="OVER_WRITE" class="w-8 h-8 rounded-lg bg-[#FF3B30] flex items-center justify-center text-white shadow-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </div>
-          <label class="text-[13px] font-medium text-gray-900">覆盖已有数据</label>
+          <div v-else class="w-8 h-8 rounded-lg bg-[#999999] flex items-center justify-center text-white shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </div>
+          <label v-if="OVER_WRITE" class="text-[13px] font-medium text-red-600">覆盖已有数据</label>
+          <label v-else class="text-[13px] font-medium text-gray-600">覆盖已有数据</label>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
           <input type="checkbox" v-model="OVER_WRITE" class="sr-only peer" />
@@ -353,7 +489,7 @@ onMounted(() => {
     </div>
 
     <!-- Actions -->
-    <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+    <div class="flex items-center justify-end gap-3 pt-4 ">
       <button 
         @click="resetConfigFunction" 
         :disabled="isProcessing"
@@ -379,7 +515,7 @@ onMounted(() => {
         <IconSave class="w-3.5 h-3.5"></IconSave>
         保存配置
       </button>
-      <div class="w-px h-5 bg-gray-300 mx-1"></div>
+      
       <div class="relative" 
         @mouseenter="showTooltip = true" 
         @mouseleave="showTooltip = false"
