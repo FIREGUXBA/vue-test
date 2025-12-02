@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, inject, onMounted } from 'vue'
+import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
 import IconClock from '../components/icons/IconClock.vue'
 import IconBriefcase from '../components/icons/IconBriefcase.vue'
 import IconCalendar from '../components/icons/IconCalendar.vue'
@@ -15,6 +15,25 @@ const data = inject('data')
 const currentUser = computed(() => data.value[0] || {})
 const currentMonth = ref(allMonthKeys[allMonthKeys.length - 1])
 
+// 容器宽度和月份显示数量
+const trendContainerRef = ref(null)
+const containerWidth = ref(0)
+const MONTH_ITEM_WIDTH = 72 // 每个月份项的宽度（px）
+const MONTH_ITEM_GAP = 4 // 月份项之间的间距（px）
+const BUTTON_WIDTH = 40 // 左右按钮的总宽度（包括间距）
+
+// 计算月份项的样式
+const monthItemStyle = computed(() => {
+  const count = monthlyTrend.value.length
+  if (count === 0) return {}
+  const totalGap = (count - 1) * MONTH_ITEM_GAP
+  const itemWidth = `calc((100% - ${totalGap}px) / ${count})`
+  return {
+    width: itemWidth,
+    minWidth: `${MONTH_ITEM_WIDTH}px`
+  }
+})
+
 // 当前年份
 const currentYear = computed(() => {
   return parseInt(currentMonth.value.split('-')[0])
@@ -27,26 +46,25 @@ const currentYearMonths = computed(() => {
 
 // 切换年份
 const changeYear = (direction) => {
-  if (direction === 'prev') {
-    // 切换到上一年
-    const prevYear = currentYear.value - 1
-    const prevYearMonths = allMonthKeys.filter(month => month.startsWith(prevYear + '-'))
-    if (prevYearMonths.length > 0) {
-      // 找到当前月份在上一年对应的月份，如果没有则选择上一年最后一个月份
-      const currentMonthNum = parseInt(currentMonth.value.split('-')[1])
-      const targetMonth = prevYearMonths.find(m => parseInt(m.split('-')[1]) === currentMonthNum) || prevYearMonths[prevYearMonths.length - 1]
-      currentMonth.value = targetMonth
+  const targetYear = direction === 'prev' ? currentYear.value - 1 : currentYear.value + 1
+  const targetYearMonths = allMonthKeys.filter(month => month.startsWith(targetYear + '-'))
+  
+  if (targetYearMonths.length > 0) {
+    // 保持当前月份号，如果目标年份没有该月份，则选择最接近的月份
+    const currentMonthNum = parseInt(currentMonth.value.split('-')[1])
+    let targetMonth = targetYearMonths.find(m => parseInt(m.split('-')[1]) === currentMonthNum)
+    
+    // 如果目标年份没有对应的月份，选择最接近的月份
+    if (!targetMonth) {
+      // 优先选择相同或更小的月份号
+      targetMonth = targetYearMonths.filter(m => parseInt(m.split('-')[1]) <= currentMonthNum).pop()
+      // 如果没有更小的，选择最小的月份
+      if (!targetMonth) {
+        targetMonth = targetYearMonths[0]
+      }
     }
-  } else if (direction === 'next') {
-    // 切换到下一年
-    const nextYear = currentYear.value + 1
-    const nextYearMonths = allMonthKeys.filter(month => month.startsWith(nextYear + '-'))
-    if (nextYearMonths.length > 0) {
-      // 找到当前月份在下一年对应的月份，如果没有则选择下一年第一个月份
-      const currentMonthNum = parseInt(currentMonth.value.split('-')[1])
-      const targetMonth = nextYearMonths.find(m => parseInt(m.split('-')[1]) === currentMonthNum) || nextYearMonths[0]
-      currentMonth.value = targetMonth
-    }
+    
+    currentMonth.value = targetMonth
   }
 }
 
@@ -59,6 +77,35 @@ const canGoPrev = computed(() => {
 const canGoNext = computed(() => {
   const nextYear = currentYear.value + 1
   return allMonthKeys.some(month => month.startsWith(nextYear + '-'))
+})
+
+// 切换月份
+const changeMonth = (direction) => {
+  const currentIndex = allMonthKeys.indexOf(currentMonth.value)
+  if (currentIndex === -1) return
+  
+  if (direction === 'prev') {
+    // 切换到上一个月
+    if (currentIndex > 0) {
+      currentMonth.value = allMonthKeys[currentIndex - 1]
+    }
+  } else if (direction === 'next') {
+    // 切换到下一个月
+    if (currentIndex < allMonthKeys.length - 1) {
+      currentMonth.value = allMonthKeys[currentIndex + 1]
+    }
+  }
+}
+
+// 检查是否可以切换到上一个月/下一个月
+const canGoPrevMonth = computed(() => {
+  const currentIndex = allMonthKeys.indexOf(currentMonth.value)
+  return currentIndex > 0
+})
+
+const canGoNextMonth = computed(() => {
+  const currentIndex = allMonthKeys.indexOf(currentMonth.value)
+  return currentIndex < allMonthKeys.length - 1
 })
 
 // 配置常量
@@ -109,9 +156,59 @@ const monthData = computed(() => {
   }
 })
 
-// 月份趋势数据
+// 计算可以显示的月份数量
+const visibleMonthCount = computed(() => {
+  if (containerWidth.value === 0) return 12 // 默认显示12个月
+  
+  // 计算可用宽度（容器宽度 - 左右按钮宽度 - 内边距）
+  const availableWidth = containerWidth.value - BUTTON_WIDTH - 16 // 16px 是容器的 padding
+  // 计算可以显示的月份数量
+  const count = Math.floor(availableWidth / (MONTH_ITEM_WIDTH + MONTH_ITEM_GAP))
+  // 至少显示1个月，最多显示12个月
+  return Math.max(1, Math.min(12, count))
+})
+
+// 月份趋势数据（根据容器宽度动态显示）
 const monthlyTrend = computed(() => {
-  return allMonthKeys.map(month => {
+  // 只获取当前年份的月份
+  const yearMonths = currentYearMonths.value
+  const count = visibleMonthCount.value
+  
+  // 如果显示的月份数量等于或大于当前年份的月份数量，直接返回所有月份
+  if (count >= yearMonths.length) {
+    return yearMonths.map(month => {
+      const hours = currentUser.value.monthlyHours?.[month] || 0
+      const monthNum = parseInt(month.split('-')[1])
+      const labels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
+      
+      return {
+        month,
+        label: labels[monthNum - 1],
+        hours,
+        isCurrent: month === currentMonth.value
+      }
+    })
+  }
+  
+  // 需要均匀分布：找到当前月份在数组中的位置
+  const currentIndex = yearMonths.findIndex(m => m === currentMonth.value)
+  const currentPos = currentIndex >= 0 ? currentIndex : yearMonths.length - 1
+  
+  // 计算起始索引，使当前月份尽量居中
+  let startIndex = Math.max(0, Math.min(
+    currentPos - Math.floor(count / 2),
+    yearMonths.length - count
+  ))
+  
+  // 如果当前月份在最后几个，从末尾开始显示
+  if (currentPos >= yearMonths.length - Math.ceil(count / 2)) {
+    startIndex = yearMonths.length - count
+  }
+  
+  // 获取要显示的月份
+  const visibleMonths = yearMonths.slice(startIndex, startIndex + count)
+  
+  return visibleMonths.map(month => {
     const hours = currentUser.value.monthlyHours?.[month] || 0
     const monthNum = parseInt(month.split('-')[1])
     const labels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
@@ -145,11 +242,51 @@ const getColorClass = (color) => {
   return map[color] || map.blue
 }
 
+// ResizeObserver 实例
+let resizeObserver = null
+
 onMounted(() => {
   // 稍微延迟触发动画，确保 DOM 渲染完成
   setTimeout(() => {
     isMounted.value = true
   }, 100)
+  
+  // 延迟初始化容器宽度监听，确保 DOM 完全渲染
+  setTimeout(() => {
+    if (trendContainerRef.value) {
+      // 初始化宽度
+      containerWidth.value = trendContainerRef.value.offsetWidth
+      
+      // 使用 ResizeObserver 监听宽度变化
+      if (typeof ResizeObserver !== 'undefined') {
+        resizeObserver = new ResizeObserver(entries => {
+          for (const entry of entries) {
+            containerWidth.value = entry.contentRect.width
+          }
+        })
+        resizeObserver.observe(trendContainerRef.value)
+      } else {
+        // 降级方案：使用 window resize 事件
+        const handleResize = () => {
+          if (trendContainerRef.value) {
+            containerWidth.value = trendContainerRef.value.offsetWidth
+          }
+        }
+        window.addEventListener('resize', handleResize)
+        onUnmounted(() => {
+          window.removeEventListener('resize', handleResize)
+        })
+      }
+    }
+  }, 150)
+})
+
+onUnmounted(() => {
+  // 清理 ResizeObserver
+  if (resizeObserver && trendContainerRef.value) {
+    resizeObserver.unobserve(trendContainerRef.value)
+    resizeObserver.disconnect()
+  }
 })
 </script>
 
@@ -190,20 +327,43 @@ onMounted(() => {
       </div>
     </div>
 
-    <div class="bg-white/60 backdrop-blur-xl border border-white/60 rounded-[20px] p-1.5 shadow-sm mb-5 animate-enter" style="--stagger: 0.5">
-      <div class="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 px-1">
-        <button v-for="item in monthlyTrend" :key="item.month" @click="currentMonth = item.month"
-          class="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 w-[72px] py-3 rounded-xl transition-all duration-300 group relative overflow-hidden"
-          :class="item.isCurrent ? 'bg-white shadow-md text-blue-600 ring-1 ring-black/5' : 'hover:bg-white/50 text-gray-500'">
-          <div v-if="item.isCurrent"
-            class="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-blue-500 rounded-t-full"></div>
-          <span class="text-xs font-bold">{{ item.label }}</span>
-          <div class="h-8 w-1.5 bg-gray-200 rounded-full flex items-end overflow-hidden">
-            <div class="w-full rounded-full transition-all duration-500"
-              :class="item.isCurrent ? 'bg-blue-500' : 'bg-gray-400 group-hover:bg-blue-300'"
-              :style="{ height: Math.min(100, (item.hours / 12) * 100) + '%' }"></div>
-          </div>
-          <span class="text-[10px] font-mono opacity-80">{{ item.hours.toFixed(1) }}</span>
+    <div class="bg-white/60 backdrop-blur-xl border border-white/60 rounded-[20px] p-1.5 shadow-sm mb-5 animate-enter" style="--stagger: 0.5" ref="trendContainerRef">
+      <div class="flex items-center gap-2">
+        <button
+          @click="changeMonth('prev')"
+          :disabled="!canGoPrevMonth"
+          class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-white/70 hover:bg-white/90 backdrop-blur-xl border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-2 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
+          :class="canGoPrevMonth ? 'cursor-pointer' : 'cursor-not-allowed'"
+        >
+          <IconChevronRight class="w-4 h-4 text-gray-600 rotate-180" />
+        </button>
+        
+        <div class="flex items-center gap-1 py-1 px-1 flex-1" :style="{ gap: `${MONTH_ITEM_GAP}px` }">
+          <button v-for="item in monthlyTrend" :key="item.month" @click="currentMonth = item.month"
+            class="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden"
+            :style="monthItemStyle"
+            :class="item.isCurrent 
+              ? 'bg-transparent shadow-lg shadow-blue-200/50 text-blue-700 ring-2 ring-blue-400/50 border border-blue-300/30 scale-105' 
+              : 'bg-transparent hover:bg-blue-50/60 hover:shadow-md hover:shadow-blue-200/30 hover:ring-1 hover:ring-blue-300/40 hover:scale-105 text-gray-600 hover:text-blue-600'">
+            <div v-if="item.isCurrent"
+              class="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-1.5 bg-blue-500 rounded-t-full shadow-sm"></div>
+            <span class="text-xs font-bold transition-colors duration-300" :class="item.isCurrent ? 'text-blue-700' : 'group-hover:text-blue-600'">{{ item.label }}</span>
+            <div class="h-8 w-1.5 bg-gray-200 rounded-full flex items-end overflow-hidden shadow-inner">
+              <div class="w-full rounded-full transition-all duration-500"
+                :class="item.isCurrent ? 'bg-gradient-to-t from-blue-600 to-blue-400 shadow-sm' : 'bg-gradient-to-t from-blue-400 to-blue-300 group-hover:from-blue-500 group-hover:to-blue-400'"
+                :style="{ height: Math.min(100, (item.hours / 12) * 100) + '%' }"></div>
+            </div>
+            <span class="text-[10px] font-mono transition-colors duration-300" :class="item.isCurrent ? 'text-blue-600 opacity-90' : 'opacity-70 group-hover:text-blue-500 group-hover:opacity-90'">{{ item.hours.toFixed(1) }}</span>
+          </button>
+        </div>
+        
+        <button
+          @click="changeMonth('next')"
+          :disabled="!canGoNextMonth"
+          class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-white/70 hover:bg-white/90 backdrop-blur-xl border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-2 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
+          :class="canGoNextMonth ? 'cursor-pointer' : 'cursor-not-allowed'"
+        >
+          <IconChevronRight class="w-4 h-4 text-gray-600" />
         </button>
       </div>
     </div>
