@@ -10,31 +10,24 @@ import IconTrendUp from '../components/icons/IconTrendUp.vue'
 import IconTrendDown from '../components/icons/IconTrendDown.vue'
 import IconClock from '../components/icons/IconClock.vue'
 import { allMonthKeys, getCellColor } from '../utils/data'
-import { queryReportData } from '../utils/api/modules/report'
+import { getEmployees, queryReportData } from '../utils/api/modules/report'
 const showToast = inject('showToast')
+
 // 数据状态
 const data = ref([])
 const loading = ref(false)
 const error = ref(null)
 const hasSearched = ref(false) // 是否已执行过查询
 
+// 员工列表
+const employeeList = ref([])
+const loadingEmployees = ref(false)
+
 // 筛选条件
 const selectedNames = ref([])
 const departmentInput = ref('') // 部门输入框（模糊查询）
-const startMonth = ref('25.01')
-const endMonth = ref('25.03')
-
-// 月份格式转换：25.01 -> 2025-01
-const convertMonthFormat = (monthKey) => {
-  const [year, month] = monthKey.split('.')
-  return `20${year}-${month.padStart(2, '0')}`
-}
-
-// 月份格式转换：2025-08 -> 25.08
-const convertPeriodToMonthKey = (period) => {
-  const [year, month] = period.split('-')
-  return `${year.slice(-2)}.${month}`
-}
+const startMonth = ref('2025-01')
+const endMonth = ref('2025-03')
 
 // 从 API 返回的数据格式转换为内部格式
 const normalizeData = (apiData) => {
@@ -68,8 +61,8 @@ const normalizeData = (apiData) => {
       }
     }
     
-    // 转换月份格式并添加工时数据
-    const monthKey = convertPeriodToMonthKey(item.period)
+    // 直接使用 period 作为月份键
+    const monthKey = item.period
     employeeMap[employeeId].monthlyHours[monthKey] = item.avg_work_hours || 0
     
     // 累计统计数据（补卡、迟到等应该累计）
@@ -105,12 +98,12 @@ const isMonthRangeValid = computed(() => {
 const showNameDropdown = ref(false)
 const showMonthDropdown = ref(false)
 
-// 从已查询的数据中获取所有姓名列表（用于下拉选择）
+// 从员工列表中获取所有姓名列表（用于下拉选择）
 const allNames = computed(() => {
-  if (!hasSearched.value || data.value.length === 0) {
+  if (employeeList.value.length === 0) {
     return []
   }
-  return [...new Set(data.value.map(i => i.name))].sort()
+  return [...new Set(employeeList.value.map(emp => emp.name))].sort()
 })
 
 // 根据选择的月份范围生成月份列表
@@ -130,8 +123,8 @@ const handleQuery = async () => {
   
   try {
     const params = {
-      start_month: convertMonthFormat(startMonth.value),
-      end_month: convertMonthFormat(endMonth.value)
+      start_month: startMonth.value,
+      end_month: endMonth.value
     }
     
     // 添加可选参数：姓名列表
@@ -143,11 +136,11 @@ const handleQuery = async () => {
     if (departmentInput.value.trim()) {
       params.department = departmentInput.value.trim()
     }
-    showToast('查询中...')
+    showToast('查询中...','pending')
     const result = await queryReportData(params)
     data.value = normalizeData(result)
     hasSearched.value = true
-    showToast('查询成功')
+    showToast('查询成功','success')
   } catch (err) {
     error.value = err.message || '查询失败，请稍后重试'
     showToast('查询失败，请稍后重试', 'error')
@@ -281,6 +274,22 @@ const handleClickOutside = (event) => {
   }
 }
 
+// 获取员工列表
+const fetchEmployeeList = async () => {
+  loadingEmployees.value = true
+  try {
+    const result = await getEmployees({})
+    // 后端返回的数据格式为数组，包含 employee_id, name, second_level_dept, third_level_dept 等字段
+    employeeList.value = Array.isArray(result) ? result : []
+  } catch (err) {
+    console.error('获取员工列表失败:', err)
+    showToast('获取员工列表失败', 'error')
+    employeeList.value = []
+  } finally {
+    loadingEmployees.value = false
+  }
+}
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
 })
@@ -297,7 +306,7 @@ onUnmounted(() => {
       <div class="flex items-center gap-6 flex-wrap">
         <!-- 选择姓名 -->
         <div class="relative dropdown-container">
-          <button @click.stop="toggleNameDropdown"
+          <button @click.stop="toggleNameDropdown();fetchEmployeeList()"
             class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border relative overflow-hidden group"
             :class="showNameDropdown || selectedNames.length > 0
               ? 'bg-blue-50/90 hover:bg-blue-50 text-blue-700 border-blue-300/50 shadow-md shadow-blue-500/10 backdrop-blur-sm'
@@ -319,8 +328,11 @@ onUnmounted(() => {
                     class="text-xs text-blue-500 hover:text-blue-600 font-medium transition-colors duration-200 px-2 py-1 rounded-md hover:bg-blue-50">清空</button>
                 </div>
                 <div class="p-2 space-y-1">
-                  <div v-if="allNames.length === 0" class="p-4 text-center text-xs text-gray-400">
-                    请先查询数据以显示姓名列表
+                  <div v-if="loadingEmployees" class="p-4 text-center text-xs text-gray-400">
+                    正在加载员工列表...
+                  </div>
+                  <div v-else-if="allNames.length === 0" class="p-4 text-center text-xs text-gray-400">
+                    暂无员工数据
                   </div>
                   <label v-for="name in allNames" :key="name"
                     class="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50/50 cursor-pointer transition-all duration-200 group/item">

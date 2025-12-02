@@ -2,7 +2,7 @@
 export const generateData = () => {
   const depts = ['TGFW测试组', 'USM测试组', '前端架构组', '后端服务组']
   const names = ['苟鸿林', '侯佳林', '刘凯', '邱宇', '巫静波', '肖洋', '赵燕子', '陈泉有', '刘广航', '刘爽', '刘潇', '郑一博', '李明', '王强']
-  const months = ['25.01', '25.02', '25.03', '25.04', '25.05', '25.06', '25.07', '25.08', '25.09', '25.10', '25.11', '25.12']
+  const months = ['2025-01', '2025-02', '2025-03', '2025-04', '2025-05', '2025-06', '2025-07', '2025-08', '2025-09', '2025-10', '2025-11', '2025-12']
 
   return names.map((name, i) => {
     const dept = depts[i % depts.length]
@@ -25,15 +25,15 @@ export const generateData = () => {
         late: Math.floor(Math.random() * 6),
       },
       role: '高级工程师',
-      hours: Math.floor(monthlyHours['25.06'] * 22),
+      hours: Math.floor(monthlyHours['2025-06'] * 22),
       standard: 176,
-      percentage: Math.min(100, Math.round((monthlyHours['25.06'] * 22 / 176) * 100)),
-      status: monthlyHours['25.06'] > 10 ? 'overtime' : (monthlyHours['25.06'] < 9 ? 'under' : 'normal')
+      percentage: Math.min(100, Math.round((monthlyHours['2025-06'] * 22 / 176) * 100)),
+      status: monthlyHours['2025-06'] > 10 ? 'overtime' : (monthlyHours['2025-06'] < 9 ? 'under' : 'normal')
     }
   })
 }
 
-export const allMonthKeys = ['25.01', '25.02', '25.03', '25.04', '25.05', '25.06', '25.07', '25.08', '25.09', '25.10', '25.11', '25.12']
+export const allMonthKeys = ['2025-01', '2025-02', '2025-03', '2025-04', '2025-05', '2025-06', '2025-07', '2025-08', '2025-09', '2025-10', '2025-11', '2025-12']
 
 // 工具函数
 export const getCellColor = (val, allValuesInColumn) => {

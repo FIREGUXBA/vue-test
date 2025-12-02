@@ -1,4 +1,25 @@
-import { post } from '../request'
+import { get, post } from '../request'
+
+/**
+ * 获取月份列表
+ */
+
+/**
+ * 获取员工列表
+ * @param {Object} params - 查询参数
+ * @param {string} params.skip - 页码
+ * @param {string} params.limit - 每页条数
+ * @param {string} params.name - 员工姓名
+ * @param {string} params.dept - 部门
+ * @returns {Promise}
+ */
+export const getEmployees = (params) => {
+  return get('/employees', params)
+}
+
+/**
+ * 获取部门列表
+ */
 
 /**
  * 查询报表数据

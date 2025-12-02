@@ -6,7 +6,7 @@ const props = defineProps({
   message: String,
   type: {
     type: String,
-    default: 'success' // 'success' | 'error' | 'info'
+    default: 'success' // 'success' | 'error' | 'info' | 'pending'
   }
 })
 
@@ -31,6 +31,12 @@ const getStyles = (type) => {
       iconBg: 'bg-[#007AFF]',
       iconColor: 'text-white',
       iconPath: 'M12 16v-4m0-4h.01'
+    },
+    pending: {
+      iconBg: 'bg-[#FF9500]',
+      iconColor: 'text-white',
+      iconPath: 'M21 12a9 9 0 11-6.219-8.56',
+      isSpinner: true
     }
   }
   return map[type] || map.success
@@ -72,8 +78,8 @@ let lastTriggerTime = 0
 watch([() => props.show, () => props.message, () => props.type], ([show, message, type]) => {
   if (show && message) {
     const now = Date.now()
-    // 如果距离上次触发超过 50ms，则添加新的 toast（避免快速重复）
-    if (now - lastTriggerTime > 50) {
+    // 如果距离上次触发超过 1ms，则添加新的 toast（避免快速重复）
+    if (now - lastTriggerTime > 1) {
       lastTriggerTime = now
       addToast(message, type)
     }
@@ -101,7 +107,30 @@ defineExpose({
                  rounded-[12px] select-none min-w-[300px] pointer-events-auto"
         >
           <div :class="['w-6 h-6 rounded-md flex items-center justify-center shadow-sm shrink-0', getStyles(toast.type).iconBg]">
-            <svg class="w-3.5 h-3.5" :class="getStyles(toast.type).iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <svg 
+              v-if="getStyles(toast.type).isSpinner"
+              class="w-3.5 h-3.5 toast-spinner" 
+              :class="getStyles(toast.type).iconColor" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24" 
+              stroke-width="3" 
+              stroke-linecap="round" 
+              stroke-linejoin="round"
+            >
+              <path :d="getStyles(toast.type).iconPath"></path>
+            </svg>
+            <svg 
+              v-else
+              class="w-3.5 h-3.5" 
+              :class="getStyles(toast.type).iconColor" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24" 
+              stroke-width="3" 
+              stroke-linecap="round" 
+              stroke-linejoin="round"
+            >
               <path :d="getStyles(toast.type).iconPath"></path>
             </svg>
           </div>
@@ -147,5 +176,19 @@ defineExpose({
 /* Apple 系统字体栈 */
 .font-sf-display {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Pending 状态的旋转动画 */
+.toast-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
