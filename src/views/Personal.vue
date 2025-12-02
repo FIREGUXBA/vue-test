@@ -505,13 +505,13 @@ onUnmounted(() => {
         <button
           @click="changeYear('prev')"
           :disabled="!canGoPrev"
-          class="flex items-center justify-center w-9 h-9 rounded-xl bg-white/70 hover:bg-white/90 backdrop-blur-xl border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-4 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
+          class="flex items-center justify-center w-9 h-9 rounded-xl bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-4 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
           :class="canGoPrev ? 'cursor-pointer' : 'cursor-not-allowed'"
         >
           <IconChevronRight class="w-4 h-4 text-gray-600 rotate-180" />
         </button>
         
-        <div class="flex items-center gap-2 px-4 py-2 bg-white/70 hover:bg-white/90 backdrop-blur-xl border border-gray-200/80 hover:border-blue-300/50 rounded-xl shadow-sm min-w-[100px] justify-center">
+        <div class="flex items-center gap-2 px-4 py-2 bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 rounded-xl shadow-sm min-w-[100px] justify-center">
           <IconCalendar class="w-3.5 h-3.5 text-gray-400" />
           <span class="text-[13px] font-semibold text-gray-700">{{ currentYear }}年</span>
         </div>
@@ -519,7 +519,7 @@ onUnmounted(() => {
         <button
           @click="changeYear('next')"
           :disabled="!canGoNext"
-          class="flex items-center justify-center w-9 h-9 rounded-xl bg-white/70 hover:bg-white/90 backdrop-blur-xl border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-4 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
+          class="flex items-center justify-center w-9 h-9 rounded-xl bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-4 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
           :class="canGoNext ? 'cursor-pointer' : 'cursor-not-allowed'"
         >
           <IconChevronRight class="w-4 h-4 text-gray-600" />
@@ -532,7 +532,7 @@ onUnmounted(() => {
         <button
           @click="changeMonth('prev')"
           :disabled="!canGoPrevMonth"
-          class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-white/70 hover:bg-white/90 backdrop-blur-xl border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-2 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
+          class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-2 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
           :class="canGoPrevMonth ? 'cursor-pointer' : 'cursor-not-allowed'"
         >
           <IconChevronRight class="w-4 h-4 text-gray-600 rotate-180" />
@@ -560,7 +560,7 @@ onUnmounted(() => {
         <button
           @click="changeMonth('next')"
           :disabled="!canGoNextMonth"
-          class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-white/70 hover:bg-white/90 backdrop-blur-xl border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-2 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
+          class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-2 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
           :class="canGoNextMonth ? 'cursor-pointer' : 'cursor-not-allowed'"
         >
           <IconChevronRight class="w-4 h-4 text-gray-600" />
@@ -571,7 +571,7 @@ onUnmounted(() => {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10 animate-enter font-sans" style="--stagger: 1">
       
       <div class="group relative overflow-hidden rounded-[32px] bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 flex flex-col justify-between transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:border-gray-200">
-        <div class="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-blue-50/50 to-indigo-50/50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none -ml-16 -mb-16"></div>
+        <div class="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-blue-50/50 to-indigo-50/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none -ml-16 -mb-16"></div>
 
         <div class="flex justify-between items-start mb-8 z-10">
           <div class="flex items-center gap-3">
@@ -623,7 +623,7 @@ onUnmounted(() => {
       </div>
 
       <div class="group relative overflow-hidden rounded-[32px] bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 flex flex-col justify-between transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:border-gray-200">
-        <div class="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-emerald-50/50 to-teal-50/50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none -ml-16 -mb-16"></div>
+        <div class="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-emerald-50/50 to-teal-50/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none -ml-16 -mb-16"></div>
 
         <div class="flex justify-between items-start mb-8 z-10">
           <div class="flex items-center gap-3">
@@ -688,13 +688,13 @@ onUnmounted(() => {
         <div 
           v-for="(item, index) in abnormalStats" 
           :key="index"
-          class="relative overflow-hidden bg-white/70 backdrop-blur-xl border rounded-[22px] p-4 transition-all duration-300 hover:bg-white hover:scale-[1.03] hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.08)] flex flex-col justify-between min-h-[120px] group cursor-default"
+          class="relative overflow-hidden bg-white/70 border rounded-[22px] p-4 transition-all duration-300 hover:bg-white hover:scale-[1.03] hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.08)] flex flex-col justify-between min-h-[120px] group cursor-default"
           :class="[
             item.value > 0 ? getColorClass(item.color).text + ' ' + 'border-gray-100' : 'border-gray-100/50 text-gray-300',
             item.value > 0 ? 'hover:border-' + item.color + '-200' : ''
           ]"
         >
-          <div v-if="item.value > 0" class="absolute -right-4 -top-4 w-16 h-16 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" :class="getColorClass(item.color).bg"></div>
+          <div v-if="item.value > 0" class="absolute -right-4 -top-4 w-16 h-16 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" :class="getColorClass(item.color).bg"></div>
 
           <div class="flex justify-between items-start relative z-10">
             <div 
@@ -748,12 +748,10 @@ onUnmounted(() => {
   from {
     opacity: 0;
     transform: translateY(20px);
-    filter: blur(4px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-    filter: blur(0);
   }
 }
 

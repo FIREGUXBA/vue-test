@@ -11,7 +11,7 @@ defineProps({
 
 <template>
   <div 
-    class="flex flex-col p-5 rounded-3xl bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_8px_40px_rgba(0,0,0,0.03)] hover:bg-white/80 transition-colors duration-500 card-enter-from"
+    class="flex flex-col p-5 rounded-3xl bg-white/70 border border-white/60 shadow-[0_8px_40px_rgba(0,0,0,0.03)] hover:bg-white/80 transition-colors duration-500 card-enter-from"
     :style="{ animation: 'fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards', animationDelay: index * 0.1 + 's' }"
   >
     <div class="flex items-center gap-3 mb-3">

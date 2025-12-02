@@ -118,11 +118,9 @@ const listData = computed(() => {
 
 <template>
   <div 
-    class="relative flex flex-col p-5 rounded-[24px] bg-white/75 backdrop-blur-2xl border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all duration-500 hover:scale-[1.01] hover:shadow-[0_12px_32px_rgba(0,0,0,0.06)] group overflow-hidden h-full"
+    class="relative flex flex-col p-4 rounded-[24px] bg-white/75 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all duration-500 hover:shadow-[0_12px_32px_rgba(0,0,0,0.06)] group overflow-hidden h-full"
   >
-    <div :class="['absolute -top-12 -right-12 w-40 h-40 rounded-full blur-[80px] opacity-[0.15] pointer-events-none', theme.bg]"></div>
-
-    <div class="flex items-center gap-3 mb-3 relative z-10 pl-1">
+    <div class="flex items-center gap-3 mb-2 relative z-10 pl-1">
       <div :class="['w-8 h-8 rounded-[10px] flex items-center justify-center shadow-sm text-white shadow-black/5', theme.bg]">
         <component :is="icon" class="w-4 h-4 stroke-[2]" />
       </div>
@@ -134,7 +132,7 @@ const listData = computed(() => {
 
     <div class="flex-1 relative z-10">
       
-      <div v-if="type === 'single'" class="flex flex-col h-full justify-center pb-4 pl-1">
+      <div v-if="type === 'single'" class="flex flex-col h-full justify-center pb-2 pl-1">
         <div class="flex items-baseline gap-1.5">
           <span class="text-[44px] font-bold text-slate-800 tracking-tight font-sf-display leading-none">
             {{ formatValue(data.value, data.unit) }}
@@ -148,12 +146,12 @@ const listData = computed(() => {
         </div>
       </div>
 
-      <div v-else class="mt-2 flex flex-col">
+      <div v-else class="mt-1 flex flex-col">
         <div class="flex flex-col divide-y divide-gray-100/60">
           <div 
             v-for="(item, idx) in listData" 
             :key="idx" 
-            class="flex items-center justify-between py-2.5 px-2 -mx-2 rounded-lg hover:bg-white/60 transition-colors duration-200 group/row cursor-default"
+            class="flex items-center justify-between py-2 px-2 -mx-2 rounded-lg hover:bg-white/60 transition-colors duration-200 group/row cursor-default"
           >
             <div class="flex items-center gap-3 overflow-hidden">
               <div 
@@ -167,7 +165,6 @@ const listData = computed(() => {
               
               <div class="flex flex-col min-w-0">
                 <span class="text-[13px] font-semibold text-slate-700 truncate leading-snug">{{ item.name }}</span>
-                <span class="text-[10px] text-gray-400 truncate font-medium">{{ item.dept }}</span>
               </div>
             </div>
 
