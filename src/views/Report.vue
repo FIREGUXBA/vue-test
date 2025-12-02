@@ -10,7 +10,7 @@ import IconTrendUp from '../components/icons/IconTrendUp.vue'
 import IconTrendDown from '../components/icons/IconTrendDown.vue'
 import IconClock from '../components/icons/IconClock.vue'
 import { allMonthKeys, getCellColor } from '../utils/data'
-import { getEmployees, queryReportData } from '../utils/api/modules/report'
+import { getEmployees, getMonthList, queryReportData } from '../utils/api/modules/report'
 const showToast = inject('showToast')
 
 // 数据状态
@@ -23,11 +23,15 @@ const hasSearched = ref(false) // 是否已执行过查询
 const employeeList = ref([])
 const loadingEmployees = ref(false)
 
+// 月份列表
+const monthList = ref([])
+const loadingMonthList = ref(false)
+
 // 筛选条件
 const selectedNames = ref([])
 const departmentInput = ref('') // 部门输入框（模糊查询）
-const startMonth = ref('2025-01')
-const endMonth = ref('2025-03')
+const startMonth = ref('')
+const endMonth = ref('')
 
 // 从 API 返回的数据格式转换为内部格式
 const normalizeData = (apiData) => {
@@ -106,14 +110,19 @@ const allNames = computed(() => {
   return [...new Set(employeeList.value.map(emp => emp.name))].sort()
 })
 
-// 根据选择的月份范围生成月份列表
+// 从查询返回的数据中提取所有月份键
 const monthKeys = computed(() => {
-  const startIdx = allMonthKeys.indexOf(startMonth.value)
-  const endIdx = allMonthKeys.indexOf(endMonth.value)
-  if (startIdx === -1 || endIdx === -1 || startIdx > endIdx) {
-    return allMonthKeys
+  if (!data.value || data.value.length === 0) {
+    return []
   }
-  return allMonthKeys.slice(startIdx, endIdx + 1)
+  const monthSet = new Set()
+  data.value.forEach(row => {
+    Object.keys(row.monthlyHours || {}).forEach(month => {
+      monthSet.add(month)
+    })
+  })
+  // 按时间顺序排序
+  return Array.from(monthSet).sort()
 })
 
 // 查询报表数据
@@ -149,18 +158,13 @@ const handleQuery = async () => {
   }
 }
 
-// 过滤后的数据（前端筛选，如果需要的话）
-const filteredData = computed(() => {
-  if (!hasSearched.value) {
-    return []
-  }
-  return data.value
-})
-
 const columnValues = computed(() => {
+  if (!hasSearched.value || !data.value || data.value.length === 0) {
+    return {}
+  }
   const map = {}
   monthKeys.value.forEach(m => {
-    map[m] = filteredData.value
+    map[m] = data.value
       .map(row => row.monthlyHours[m])
       .filter(val => val !== undefined && val !== null)
   })
@@ -168,16 +172,18 @@ const columnValues = computed(() => {
 })
 
 const footerStats = computed(() => {
-  if (filteredData.value.length === 0) return {
-    avgAll: 0,
-    topHours: [],
-    bottomHours: [],
-    topMissing: [],
-    topLeave: [],
-    topLate: []
+  if (!hasSearched.value || !data.value || data.value.length === 0) {
+    return {
+      avgAll: 0,
+      topHours: [],
+      bottomHours: [],
+      topMissing: [],
+      topLeave: [],
+      topLate: []
+    }
   }
 
-  const currentData = [...filteredData.value]
+  const currentData = [...data.value]
   
   // 辅助函数：标准排序并格式化
   const getRanking = (sortFn, valKey, unit, limit = 5) => {
@@ -290,8 +296,26 @@ const fetchEmployeeList = async () => {
   }
 }
 
+// 获取月份列表
+const fetchMonthList = async () => {
+  loadingMonthList.value = true
+  try {
+    const result = await getMonthList()
+    monthList.value = Array.isArray(result) ? result : []
+    startMonth.value = monthList.value[0]
+    endMonth.value = monthList.value[monthList.value.length - 1]
+  } catch (err) {
+    console.error('获取月份列表失败:', err)
+    showToast('获取月份列表失败', 'error')
+    monthList.value = []
+  } finally {
+    loadingMonthList.value = false
+  }
+}
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  fetchMonthList()
 })
 
 onUnmounted(() => {
@@ -364,7 +388,7 @@ onUnmounted(() => {
 
         <!-- 选择月份范围 -->
         <div class="relative dropdown-container">
-          <button @click.stop="toggleMonthDropdown"
+          <button @click.stop="toggleMonthDropdown();fetchMonthList()"
             class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border relative overflow-hidden group"
             :class="showMonthDropdown
               ? 'bg-blue-50/90 hover:bg-blue-50 text-blue-700 border-blue-300/50 shadow-md shadow-blue-500/10 backdrop-blur-sm'
@@ -388,14 +412,14 @@ onUnmounted(() => {
                     <label class="block text-xs font-semibold text-gray-500 mb-2">起始月份</label>
                     <select v-model="startMonth" @change.stop
                       class="w-full px-3 py-2 rounded-lg text-sm border border-gray-200/60 bg-white focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-200 hover:border-blue-300/50 cursor-pointer">
-                      <option v-for="month in allMonthKeys" :key="month" :value="month">{{ month }}</option>
+                      <option v-for="month in monthList" :key="month" :value="month">{{ month }}</option>
                     </select>
                   </div>
                   <div>
                     <label class="block text-xs font-semibold text-gray-500 mb-2">结束月份</label>
                     <select v-model="endMonth" @change.stop
                       class="w-full px-3 py-2 rounded-lg text-sm border border-gray-200/60 bg-white focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-200 hover:border-blue-300/50 cursor-pointer">
-                      <option v-for="month in allMonthKeys" :key="month" :value="month">{{ month }}</option>
+                      <option v-for="month in monthList" :key="month" :value="month">{{ month }}</option>
                     </select>
                   </div>
                   <div class="pt-2 border-t border-gray-100">
@@ -456,7 +480,7 @@ onUnmounted(() => {
             <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">查询结果</span>
             <span
               class="text-sm font-semibold text-gray-800 group-hover:text-blue-700 transition-colors duration-300">{{
-              filteredData.length }} 人</span>
+              data.length }} 人</span>
           </div>
         </div>
 
@@ -511,7 +535,7 @@ onUnmounted(() => {
             </tr>
           </thead>
           <tbody class="relative">
-            <tr v-for="row in filteredData" :key="row.id" class="group hover:bg-gray-50 transition-colors duration-150">
+            <tr v-for="row in data" :key="row.id" class="group hover:bg-gray-50 transition-colors duration-150">
               <td class="px-4 py-2 text-[13px] text-gray-900 border-b border-gray-100 whitespace-nowrap font-medium sticky left-0 bg-white group-hover:bg-gray-50 border-r border-gray-200 z-10">{{ row.name }}</td>
               <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap">
                 <span class="px-2 py-0.5 rounded bg-gray-100 text-[11px] border border-gray-200">{{ row.dept }}</span>
@@ -541,7 +565,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 空状态提示 -->
-    <div v-if="hasSearched && !loading && filteredData.length === 0" class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-gray-200">
+    <div v-if="hasSearched && !loading && data.length === 0" class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-gray-200">
       <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
@@ -549,7 +573,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 统计卡片（仅在查询后显示） -->
-    <div v-if="hasSearched && !loading && filteredData.length > 0" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5 pb-12">
+    <div v-if="hasSearched && !loading && data.length > 0" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5 pb-12">
       
       <SummaryCard 
         title="平均工时" 

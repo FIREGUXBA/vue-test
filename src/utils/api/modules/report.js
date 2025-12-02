@@ -2,7 +2,11 @@ import { get, post } from '../request'
 
 /**
  * 获取月份列表
+ * @returns {Promise}
  */
+export const getMonthList = () => {
+  return get('/attendance/periods')
+}
 
 /**
  * 获取员工列表
