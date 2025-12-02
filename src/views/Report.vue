@@ -16,7 +16,6 @@ const showToast = inject('showToast')
 // 数据状态
 const data = ref([])
 const loading = ref(false)
-const error = ref(null)
 const hasSearched = ref(false) // 是否已执行过查询
 
 // 员工列表
@@ -41,11 +40,11 @@ const normalizeData = (apiData) => {
 
   // 按员工分组数据
   const employeeMap = {}
-  
+
   apiData.forEach(item => {
     const employeeId = item.employee_id
     const employee = item.employee || {}
-    
+
     // 如果该员工还没有记录，创建新记录
     if (!employeeMap[employeeId]) {
       employeeMap[employeeId] = {
@@ -64,11 +63,11 @@ const normalizeData = (apiData) => {
         hours: 0 // 用于统计总工时
       }
     }
-    
+
     // 直接使用 period 作为月份键
     const monthKey = item.period
     employeeMap[employeeId].monthlyHours[monthKey] = item.avg_work_hours || 0
-    
+
     // 累计统计数据（补卡、迟到等应该累计）
     const stats = employeeMap[employeeId].stats
     stats.missingCard += item.card_fix_count || 0
@@ -76,11 +75,11 @@ const normalizeData = (apiData) => {
     stats.leave += item.leave_days_total || 0
     stats.late += item.late_count || 0
     stats.earlyLeave += item.early_leave_count || 0
-    
+
     // 累计总工时（使用总工时）
     employeeMap[employeeId].hours += item.total_work_hours || 0
   })
-  
+
   // 转换为数组并返回
   return Object.values(employeeMap)
 }
@@ -128,30 +127,28 @@ const monthKeys = computed(() => {
 // 查询报表数据
 const handleQuery = async () => {
   loading.value = true
-  error.value = null
-  
+
   try {
     const params = {
       start_month: startMonth.value,
       end_month: endMonth.value
     }
-    
+
     // 添加可选参数：姓名列表
     if (selectedNames.value.length > 0) {
       params.names = selectedNames.value
     }
-    
+
     // 添加可选参数：部门模糊查询
     if (departmentInput.value.trim()) {
       params.department = departmentInput.value.trim()
     }
-    showToast('查询中...','pending')
+    showToast('查询中...', 'pending')
     const result = await queryReportData(params)
     data.value = normalizeData(result)
     hasSearched.value = true
-    showToast('查询成功','success')
+    showToast('查询成功', 'success')
   } catch (err) {
-    error.value = err.message || '查询失败，请稍后重试'
     showToast('查询失败，请稍后重试', 'error')
   } finally {
     loading.value = false
@@ -184,7 +181,7 @@ const footerStats = computed(() => {
   }
 
   const currentData = [...data.value]
-  
+
   // 辅助函数：标准排序并格式化
   const getRanking = (sortFn, valKey, unit, limit = 5) => {
     return [...currentData]
@@ -203,10 +200,10 @@ const footerStats = computed(() => {
 
   // 1. 平均工时
   let totalSum = 0, totalCount = 0
-  currentData.forEach(d => monthKeys.value.forEach(m => { 
+  currentData.forEach(d => monthKeys.value.forEach(m => {
     if (d.monthlyHours[m] !== undefined && d.monthlyHours[m] !== null) {
-      totalSum += d.monthlyHours[m]; 
-      totalCount++ 
+      totalSum += d.monthlyHours[m];
+      totalCount++
     }
   }))
   const avgAll = totalCount > 0 ? (totalSum / totalCount).toFixed(2) : '0.00'
@@ -233,7 +230,7 @@ const footerStats = computed(() => {
     .slice(0, 5)
     .map(i => ({ name: i.name, dept: i.dept, value: i.stats.leave, unit: '天' }))
 
-  return { 
+  return {
     avgAll,
     topHours,
     bottomHours,
@@ -251,7 +248,7 @@ watch([startMonth, endMonth], ([start, end]) => {
     endMonth.value = start
     return
   }
-  
+
   const monthCount = endIdx - startIdx + 1
   if (monthCount < 2) {
     const newEndIdx = Math.min(startIdx + 1, allMonthKeys.length - 1)
@@ -330,7 +327,7 @@ onUnmounted(() => {
       <div class="flex items-center gap-6 flex-wrap">
         <!-- 选择姓名 -->
         <div class="relative dropdown-container">
-          <button @click.stop="toggleNameDropdown();fetchEmployeeList()"
+          <button @click.stop="toggleNameDropdown(); fetchEmployeeList()"
             class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border relative overflow-hidden group"
             :class="showNameDropdown || selectedNames.length > 0
               ? 'bg-blue-50/90 hover:bg-blue-50 text-blue-700 border-blue-300/50 shadow-md shadow-blue-500/10 backdrop-blur-sm'
@@ -362,8 +359,7 @@ onUnmounted(() => {
                     class="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50/50 cursor-pointer transition-all duration-200 group/item">
                     <input type="checkbox" :value="name" v-model="selectedNames" @click.stop
                       class="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-0 transition-all duration-200 cursor-pointer" />
-                    <span
-                      class="text-sm text-gray-700 group-hover/item:text-blue-700 transition-colors duration-200">{{
+                    <span class="text-sm text-gray-700 group-hover/item:text-blue-700 transition-colors duration-200">{{
                       name }}</span>
                   </label>
                 </div>
@@ -374,21 +370,18 @@ onUnmounted(() => {
 
         <!-- 部门输入框（模糊查询） -->
         <div class="relative">
-          <div class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border bg-white/80 hover:bg-white text-gray-700 border-gray-200/60 hover:border-blue-500/30 hover:shadow-sm backdrop-blur-sm">
+          <div
+            class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border bg-white/80 hover:bg-white text-gray-700 border-gray-200/60 hover:border-blue-500/30 hover:shadow-sm backdrop-blur-sm">
             <IconFilter class="w-4 h-4 text-gray-500"></IconFilter>
-            <input 
-              v-model="departmentInput"
-              type="text"
-              placeholder="部门（模糊查询）"
+            <input v-model="departmentInput" type="text" placeholder="部门（模糊查询）"
               class="flex-1 outline-none bg-transparent text-sm text-gray-700 placeholder-gray-400 min-w-[120px]"
-              @keyup.enter="handleQuery"
-            />
+              @keyup.enter="handleQuery" />
           </div>
         </div>
 
         <!-- 选择月份范围 -->
         <div class="relative dropdown-container">
-          <button @click.stop="toggleMonthDropdown();fetchMonthList()"
+          <button @click.stop="toggleMonthDropdown(); fetchMonthList()"
             class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border relative overflow-hidden group"
             :class="showMonthDropdown
               ? 'bg-blue-50/90 hover:bg-blue-50 text-blue-700 border-blue-300/50 shadow-md shadow-blue-500/10 backdrop-blur-sm'
@@ -430,17 +423,20 @@ onUnmounted(() => {
                         {{ selectedMonthCount }} 个月
                       </span>
                     </div>
-                    <div class="mt-2 text-xs"
-                      :class="isMonthRangeValid ? 'text-green-600' : 'text-orange-600'">
+                    <div class="mt-2 text-xs" :class="isMonthRangeValid ? 'text-green-600' : 'text-orange-600'">
                       <span v-if="isMonthRangeValid" class="flex items-center gap-1">
                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                          <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd" />
                         </svg>
                         满足要求（至少2个月）
                       </span>
                       <span v-else class="flex items-center gap-1">
                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                          <path fill-rule="evenodd"
+                            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                            clip-rule="evenodd" />
                         </svg>
                         至少需要选择2个月
                       </span>
@@ -455,22 +451,22 @@ onUnmounted(() => {
         <div class="h-8 w-px bg-gray-200/60 transition-opacity duration-300"></div>
 
         <!-- 查询按钮 -->
-        <button
-          @click="handleQuery"
-          :disabled="loading || !isMonthRangeValid"
+        <button @click="handleQuery" :disabled="loading || !isMonthRangeValid"
           class="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
           :class="loading || !isMonthRangeValid
             ? 'bg-gray-100 text-gray-400 border-gray-200'
             : 'bg-blue-500 hover:bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30'">
-          <svg v-if="loading" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <svg v-if="loading" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none"
+            viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            <path class="opacity-75" fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+            </path>
           </svg>
           <span v-else>查询</span>
         </button>
 
-        <div
-          v-if="hasSearched"
+        <div v-if="hasSearched"
           class="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50/50 border border-gray-100/50 hover:bg-gray-50 transition-all duration-300 group">
           <div
             class="bg-gray-100/80 p-1.5 rounded-lg text-gray-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all duration-300">
@@ -480,7 +476,7 @@ onUnmounted(() => {
             <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">查询结果</span>
             <span
               class="text-sm font-semibold text-gray-800 group-hover:text-blue-700 transition-colors duration-300">{{
-              data.length }} 人</span>
+                data.length }} 人</span>
           </div>
         </div>
 
@@ -489,137 +485,130 @@ onUnmounted(() => {
         class="flex items-center gap-3 bg-gray-50/50 px-3 py-2 rounded-xl border border-gray-100/50 hover:bg-gray-50/80 transition-all duration-300">
         <div
           class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 transition-all duration-300 hover:scale-105">
-          <span
-            class="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.4)] "></span>
-          前三名</div>
+          <span class="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.4)] "></span>
+          前三名
+        </div>
         <div
           class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 transition-all duration-300 hover:scale-105">
-          <span
-            class="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.4)] "></span>
-          后三名</div>
+          <span class="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.4)] "></span>
+          后三名
+        </div>
         <div
           class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 transition-all duration-300 hover:scale-105">
-          <span
-            class="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.4)] "></span>
-          &lt;9h</div>
+          <span class="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.4)] "></span>
+          &lt;9h
+        </div>
       </div>
     </div>
 
-    <!-- 错误提示 -->
-    <div v-if="error" class="rounded-xl bg-red-50 border border-red-200 p-4 flex items-center gap-3">
-      <svg class="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+    <!-- 加载状态 -->
+    <div v-if="loading" class="flex flex-col items-center justify-center py-20">
+      <svg class="animate-spin h-12 w-12 text-blue-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none"
+        viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+        </path>
       </svg>
-      <span class="text-sm text-red-700">{{ error }}</span>
+      <p class="text-gray-500 text-sm">正在查询数据...</p>
     </div>
 
-    <!-- 数据表格（仅在查询后显示） -->
-    <div v-if="hasSearched && !loading" class="rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-sm">
+    <!-- 数据表格（仅在查询后且有数据时显示） -->
+    <div v-if="hasSearched && !loading && data.length > 0" class="rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-sm">
       <div class="overflow-x-auto custom-scrollbar">
         <table class="min-w-full border-collapse">
           <thead>
             <tr>
-              <th class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 w-28 text-left sticky left-0 shadow-[4px_0_12px_rgba(0,0,0,0.02)] bg-gray-50 z-20">姓名</th>
-              <th class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 w-32 text-left">所属团队</th>
-              <th v-for="m in monthKeys" :key="m" class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center min-w-[90px]">
+              <th
+                class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 w-28 text-left sticky left-0 shadow-[4px_0_12px_rgba(0,0,0,0.02)] bg-gray-50 z-20">
+                姓名</th>
+              <th
+                class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 w-32 text-left">
+                所属团队</th>
+              <th v-for="m in monthKeys" :key="m"
+                class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center min-w-[90px]">
                 <div class="flex flex-col">
                   <span class="text-gray-800">{{ m }}</span>
                   <span class="text-[9px] font-normal text-gray-400 mt-0.5">平均工时</span>
                 </div>
               </th>
-              <th class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">补卡</th>
-              <th class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">出差</th>
-              <th class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">调休</th>
-              <th class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">请假</th>
-              <th class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">迟到</th>
+              <th
+                class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">
+                补卡</th>
+              <th
+                class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">
+                出差</th>
+              <th
+                class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">
+                调休</th>
+              <th
+                class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">
+                请假</th>
+              <th
+                class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">
+                迟到</th>
             </tr>
           </thead>
           <tbody class="relative">
             <tr v-for="row in data" :key="row.id" class="group hover:bg-gray-50 transition-colors duration-150">
-              <td class="px-4 py-2 text-[13px] text-gray-900 border-b border-gray-100 whitespace-nowrap font-medium sticky left-0 bg-white group-hover:bg-gray-50 border-r border-gray-200 z-10">{{ row.name }}</td>
+              <td
+                class="px-4 py-2 text-[13px] text-gray-900 border-b border-gray-100 whitespace-nowrap font-medium sticky left-0 bg-white group-hover:bg-gray-50 border-r border-gray-200 z-10">
+                {{ row.name }}</td>
               <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap">
                 <span class="px-2 py-0.5 rounded bg-gray-100 text-[11px] border border-gray-200">{{ row.dept }}</span>
               </td>
-              <td v-for="m in monthKeys" :key="m" class="px-4 py-2 text-[13px] text-gray-700 border-b border-gray-100 whitespace-nowrap text-center">
-                <div v-if="row.monthlyHours[m] !== undefined && row.monthlyHours[m] !== null" class="py-1 rounded text-[12px]" :class="getCellColor(row.monthlyHours[m], columnValues[m])">{{ row.monthlyHours[m].toFixed(2) }}</div>
+              <td v-for="m in monthKeys" :key="m"
+                class="px-4 py-2 text-[13px] text-gray-700 border-b border-gray-100 whitespace-nowrap text-center">
+                <div v-if="row.monthlyHours[m] !== undefined && row.monthlyHours[m] !== null"
+                  class="py-1 rounded text-[12px]" :class="getCellColor(row.monthlyHours[m], columnValues[m])">{{
+                    row.monthlyHours[m].toFixed(2) }}</div>
                 <div v-else class="py-1 rounded text-[12px] text-gray-400">-</div>
               </td>
-              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{ row.stats.missingCard }}</td>
-              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{ row.stats.businessTrip || '-' }}</td>
-              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{ row.stats.compLeave || '-' }}</td>
-              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{ row.stats.leave || '-' }}</td>
-              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{ row.stats.late || '-' }}</td>
+              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
+                row.stats.missingCard }}</td>
+              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
+                row.stats.businessTrip || '-' }}</td>
+              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
+                row.stats.compLeave || '-' }}</td>
+              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
+                row.stats.leave || '-' }}</td>
+              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
+                row.stats.late || '-' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- 加载状态 -->
-    <div v-if="loading" class="flex flex-col items-center justify-center py-20">
-      <svg class="animate-spin h-12 w-12 text-blue-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-      </svg>
-      <p class="text-gray-500 text-sm">正在查询数据...</p>
-    </div>
-
     <!-- 空状态提示 -->
-    <div v-if="hasSearched && !loading && data.length === 0" class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-gray-200">
+    <div v-if="!loading && (!hasSearched || data.length === 0)"
+      class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-gray-200">
       <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
-      <p class="text-gray-500 text-sm">暂无数据，请调整查询条件后重试</p>
+      <p class="text-gray-500 text-sm">
+        {{ !hasSearched ? '请先查询数据' : '暂无数据，请调整查询条件后重试' }}
+      </p>
     </div>
 
     <!-- 统计卡片（仅在查询后显示） -->
-    <div v-if="hasSearched && !loading && data.length > 0" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5 pb-12">
-      
-      <SummaryCard 
-        title="平均工时" 
-        type="single"
-        color="green"
-        :icon="IconChart"
-        :data="{ value: footerStats.avgAll, unit: '小时', subtitle: '' }" 
-      />
+    <div v-if="hasSearched && !loading && data.length > 0"
+      class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5 pb-12">
 
-      <SummaryCard 
-        title="工时投入榜" 
-        type="list"
-        color="blue"
-        :limit="5"
-        :icon="IconTrendUp" 
-        :data="footerStats.topHours"
-      />
+      <SummaryCard title="平均工时" type="single" color="green" :icon="IconChart"
+        :data="{ value: footerStats.avgAll, unit: '小时', subtitle: '' }" />
 
-      <SummaryCard 
-        title="工时不足榜" 
-        type="list"
-        color="orange"
-        :limit="5"
-        :icon="IconTrendDown" 
-        :data="footerStats.bottomHours"
-      />
+      <SummaryCard title="工时投入榜" type="list" color="blue" :limit="5" :icon="IconTrendUp" :data="footerStats.topHours" />
 
-      <SummaryCard 
-        title="迟到次数榜" 
-        type="list"
-        color="red"
-        :limit="5"
-        :icon="IconClock" 
-        :data="footerStats.topLate"
-      />
-      
-      <SummaryCard 
-        title="请假天数榜" 
-        type="list"
-        color="purple"
-        :limit="5"
-        :icon="IconCalendar" 
-        :data="footerStats.topLeave"
-      />
+      <SummaryCard title="工时不足榜" type="list" color="orange" :limit="5" :icon="IconTrendDown"
+        :data="footerStats.bottomHours" />
+
+      <SummaryCard title="迟到次数榜" type="list" color="red" :limit="5" :icon="IconClock" :data="footerStats.topLate" />
+
+      <SummaryCard title="请假天数榜" type="list" color="purple" :limit="5" :icon="IconCalendar"
+        :data="footerStats.topLeave" />
 
     </div>
   </div>
 </template>
-
