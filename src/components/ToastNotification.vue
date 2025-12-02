@@ -161,11 +161,13 @@ defineExpose({
 .toast-enter-from {
   opacity: 0;
   transform: translateX(100%) scale(0.96);
+  filter: blur(8px);
 }
 
 .toast-leave-to {
   opacity: 0;
   transform: translateX(100%) scale(0.96);
+  filter: blur(8px);
 }
 
 /* 移动动画 - 当其他 toast 消失时，剩余的 toast 平滑上移 */

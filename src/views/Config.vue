@@ -369,7 +369,7 @@ onMounted(() => {
       <!-- Section Header -->
       <div class="px-4 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center justify-end gap-2">
         <div class="flex items-center gap-2 px-3 ">
-          <div v-if="currentMonth" class="w-2 h-2 rounded-full bg-green-500 "></div>
+          <div v-if="currentMonth" class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_6px_rgba(74,222,128,0.4)] "></div>
           <div v-else class="w-2 h-2 rounded-full bg-red-500 "></div>
           <span v-if="currentMonth" class="text-[11px] font-medium text-gray-600">{{currentMonth}}月 · 月份一致</span>
           <span v-else class="text-[11px] font-medium text-gray-600">月份不一致</span>

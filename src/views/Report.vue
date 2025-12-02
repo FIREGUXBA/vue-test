@@ -323,15 +323,15 @@ onUnmounted(() => {
 <template>
   <div class="space-y-6">
     <div
-      class="p-2 pl-4 pr-2 rounded-2xl flex flex-wrap gap-4 items-center justify-between bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_8px_40px_rgba(0,0,0,0.03)] relative z-40">
+      class="px-4 py-3  rounded-xl flex flex-wrap gap-4 items-center justify-between bg-white/80 border border-gray-200 shadow-sm relative z-40">
       <div class="flex items-center gap-6 flex-wrap">
         <!-- 选择姓名 -->
         <div class="relative dropdown-container">
           <button @click.stop="toggleNameDropdown(); fetchEmployeeList()"
-            class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border relative overflow-hidden group"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-300 border relative overflow-hidden group"
             :class="showNameDropdown || selectedNames.length > 0
-              ? 'bg-blue-50/90 hover:bg-blue-50 text-blue-700 border-blue-300/50 shadow-md shadow-blue-500/10 backdrop-blur-sm'
-              : 'bg-white/80 hover:bg-white text-gray-700 border-gray-200/60 hover:border-blue-500/30 hover:shadow-sm backdrop-blur-sm'">
+              ? 'bg-blue-50 hover:bg-blue-50 text-blue-700 border-blue-300 shadow-sm'
+              : 'bg-gray-200/50 hover:bg-gray-200 text-gray-700 border-transparent hover:border-blue-500/30 hover:shadow-sm'">
             <IconUsers class="w-4 h-4 transition-colors duration-300"
               :class="showNameDropdown || selectedNames.length > 0 ? 'text-blue-600' : 'text-gray-500'">
             </IconUsers>
@@ -341,7 +341,7 @@ onUnmounted(() => {
           </button>
           <transition name="dropdown">
             <div v-if="showNameDropdown" @click.stop
-              class="absolute top-full left-0 mt-2 w-64 bg-white/95 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-[0_8px_40px_rgba(0,0,0,0.12)] z-[100] max-h-80 overflow-y-auto custom-scrollbar">
+              class="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl border border-gray-200 shadow-lg z-[100] max-h-80 overflow-y-auto custom-scrollbar">
               <div class="p-2">
                 <div class="flex items-center justify-between p-2 border-b border-gray-100">
                   <span class="text-xs font-semibold text-gray-500">选择姓名</span>
@@ -371,10 +371,10 @@ onUnmounted(() => {
         <!-- 部门输入框（模糊查询） -->
         <div class="relative">
           <div
-            class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border bg-white/80 hover:bg-white text-gray-700 border-gray-200/60 hover:border-blue-500/30 hover:shadow-sm backdrop-blur-sm">
+            class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-300 border bg-gray-200/50 hover:bg-gray-200 text-gray-700 border-transparent hover:border-blue-500/30 hover:shadow-sm">
             <IconFilter class="w-4 h-4 text-gray-500"></IconFilter>
             <input v-model="departmentInput" type="text" placeholder="部门（模糊查询）"
-              class="flex-1 outline-none bg-transparent text-sm text-gray-700 placeholder-gray-400 min-w-[120px]"
+              class="flex-1 outline-none bg-transparent text-[13px] text-gray-700 placeholder-gray-400 min-w-[120px]"
               @keyup.enter="handleQuery" />
           </div>
         </div>
@@ -382,10 +382,10 @@ onUnmounted(() => {
         <!-- 选择月份范围 -->
         <div class="relative dropdown-container">
           <button @click.stop="toggleMonthDropdown(); fetchMonthList()"
-            class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border relative overflow-hidden group"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-300 border relative overflow-hidden group"
             :class="showMonthDropdown
-              ? 'bg-blue-50/90 hover:bg-blue-50 text-blue-700 border-blue-300/50 shadow-md shadow-blue-500/10 backdrop-blur-sm'
-              : 'bg-white/80 hover:bg-white text-gray-700 border-gray-200/60 hover:border-blue-500/30 hover:shadow-sm backdrop-blur-sm'">
+              ? 'bg-blue-50 hover:bg-blue-50 text-blue-700 border-blue-300 shadow-sm'
+              : 'bg-gray-200/50 hover:bg-gray-200 text-gray-700 border-transparent hover:border-blue-500/30 hover:shadow-sm'">
             <IconCalendar class="w-4 h-4 transition-colors duration-300"
               :class="showMonthDropdown ? 'text-blue-600' : 'text-gray-500'"></IconCalendar>
             <span>月份范围</span>
@@ -398,20 +398,20 @@ onUnmounted(() => {
           </button>
           <transition name="dropdown">
             <div v-if="showMonthDropdown" @click.stop
-              class="absolute top-full left-0 mt-2 w-64 bg-white/95 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-[0_8px_40px_rgba(0,0,0,0.12)] z-[100]">
+              class="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl border border-gray-200 shadow-lg z-[100]">
               <div class="p-4">
                 <div class="space-y-4">
                   <div>
                     <label class="block text-xs font-semibold text-gray-500 mb-2">起始月份</label>
                     <select v-model="startMonth" @change.stop
-                      class="w-full px-3 py-2 rounded-lg text-sm border border-gray-200/60 bg-white focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-200 hover:border-blue-300/50 cursor-pointer">
+                      class="w-full px-3 py-2 rounded-lg text-sm border border-gray-200 bg-gray-200/50 hover:bg-gray-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 focus:bg-white outline-none transition-all duration-200 cursor-pointer">
                       <option v-for="month in monthList" :key="month" :value="month">{{ month }}</option>
                     </select>
                   </div>
                   <div>
                     <label class="block text-xs font-semibold text-gray-500 mb-2">结束月份</label>
                     <select v-model="endMonth" @change.stop
-                      class="w-full px-3 py-2 rounded-lg text-sm border border-gray-200/60 bg-white focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-200 hover:border-blue-300/50 cursor-pointer">
+                      class="w-full px-3 py-2 rounded-lg text-sm border border-gray-200 bg-gray-200/50 hover:bg-gray-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 focus:bg-white outline-none transition-all duration-200 cursor-pointer">
                       <option v-for="month in monthList" :key="month" :value="month">{{ month }}</option>
                     </select>
                   </div>
@@ -448,14 +448,14 @@ onUnmounted(() => {
           </transition>
         </div>
 
-        <div class="h-8 w-px bg-gray-200/60 transition-opacity duration-300"></div>
+        <div class="h-7 w-px bg-gray-200 transition-opacity duration-300"></div>
 
         <!-- 查询按钮 -->
         <button @click="handleQuery" :disabled="loading || !isMonthRangeValid"
-          class="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
+          class="flex items-center px-5 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-300 border relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
           :class="loading || !isMonthRangeValid
             ? 'bg-gray-100 text-gray-400 border-gray-200'
-            : 'bg-blue-500 hover:bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30'">
+            : 'bg-[#007AFF] hover:bg-[#0062CC] text-white border-[#007AFF] hover:shadow-md'">
           <svg v-if="loading" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none"
             viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -467,22 +467,19 @@ onUnmounted(() => {
         </button>
 
         <div v-if="hasSearched"
-          class="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50/50 border border-gray-100/50 hover:bg-gray-50 transition-all duration-300 group">
+          class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-all duration-300 group">
           <div
-            class="bg-gray-100/80 p-1.5 rounded-lg text-gray-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all duration-300">
-            <IconUsers class="w-4 h-4"></IconUsers>
+            class="bg-gray-100 p-1.5 rounded-lg text-gray-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all duration-300">
+            <IconUsers class="w-3 h-3"></IconUsers>
           </div>
-          <div class="flex flex-col">
-            <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">查询结果</span>
-            <span
-              class="text-sm font-semibold text-gray-800 group-hover:text-blue-700 transition-colors duration-300">{{
-                data.length }} 人</span>
-          </div>
+          <span
+            class="text-[13px] font-semibold text-gray-800 group-hover:text-blue-700 transition-colors duration-300">{{
+              data.length }} 人</span>
         </div>
 
       </div>
       <div
-        class="flex items-center gap-3 bg-gray-50/50 px-3 py-2 rounded-xl border border-gray-100/50 hover:bg-gray-50/80 transition-all duration-300">
+        class="flex items-center gap-3 px-3 py-1.5 ">
         <div
           class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 transition-all duration-300 hover:scale-105">
           <span class="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.4)] "></span>
@@ -514,65 +511,65 @@ onUnmounted(() => {
     </div>
 
     <!-- 数据表格（仅在查询后且有数据时显示） -->
-    <div v-if="hasSearched && !loading && data.length > 0" class="rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-sm">
+    <div v-if="hasSearched && !loading && data.length > 0" class="rounded-xl overflow-hidden bg-white/80 border border-gray-200 shadow-sm">
       <div class="overflow-x-auto custom-scrollbar">
         <table class="min-w-full border-collapse">
           <thead>
             <tr>
               <th
-                class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 w-28 text-left sticky left-0 shadow-[4px_0_12px_rgba(0,0,0,0.02)] bg-gray-50 z-20">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 w-28 text-left sticky left-0 shadow-[4px_0_12px_rgba(0,0,0,0.02)] z-20">
                 姓名</th>
               <th
-                class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 w-32 text-left">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 w-32 text-left">
                 所属团队</th>
               <th v-for="m in monthKeys" :key="m"
-                class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center min-w-[90px]">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center min-w-[90px]">
                 <div class="flex flex-col">
                   <span class="text-gray-800">{{ m }}</span>
                   <span class="text-[9px] font-normal text-gray-400 mt-0.5">平均工时</span>
                 </div>
               </th>
               <th
-                class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center">
                 补卡</th>
               <th
-                class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center">
                 出差</th>
               <th
-                class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center">
                 调休</th>
               <th
-                class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center">
                 请假</th>
               <th
-                class="px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 text-center">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center">
                 迟到</th>
             </tr>
           </thead>
           <tbody class="relative">
-            <tr v-for="row in data" :key="row.id" class="group hover:bg-gray-50 transition-colors duration-150">
+            <tr v-for="row in data" :key="row.id" class="group hover:bg-gray-50/50 transition-colors duration-150">
               <td
-                class="px-4 py-2 text-[13px] text-gray-900 border-b border-gray-100 whitespace-nowrap font-medium sticky left-0 bg-white group-hover:bg-gray-50 border-r border-gray-200 z-10">
+                class="px-4 py-3 text-[13px] text-gray-900 border-b border-gray-100 whitespace-nowrap font-medium sticky left-0 bg-white/80 group-hover:bg-gray-50/50 border-r border-gray-200 z-10">
                 {{ row.name }}</td>
-              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap">
+              <td class="px-4 py-3 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap">
                 <span class="px-2 py-0.5 rounded bg-gray-100 text-[11px] border border-gray-200">{{ row.dept }}</span>
               </td>
               <td v-for="m in monthKeys" :key="m"
-                class="px-4 py-2 text-[13px] text-gray-700 border-b border-gray-100 whitespace-nowrap text-center">
+                class="px-4 py-3 text-[13px] text-gray-700 border-b border-gray-100 whitespace-nowrap text-center">
                 <div v-if="row.monthlyHours[m] !== undefined && row.monthlyHours[m] !== null"
                   class="py-1 rounded text-[12px]" :class="getCellColor(row.monthlyHours[m], columnValues[m])">{{
                     row.monthlyHours[m].toFixed(2) }}</div>
                 <div v-else class="py-1 rounded text-[12px] text-gray-400">-</div>
               </td>
-              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
+              <td class="px-4 py-3 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
                 row.stats.missingCard }}</td>
-              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
+              <td class="px-4 py-3 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
                 row.stats.businessTrip || '-' }}</td>
-              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
+              <td class="px-4 py-3 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
                 row.stats.compLeave || '-' }}</td>
-              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
+              <td class="px-4 py-3 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
                 row.stats.leave || '-' }}</td>
-              <td class="px-4 py-2 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
+              <td class="px-4 py-3 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
                 row.stats.late || '-' }}</td>
             </tr>
           </tbody>
@@ -582,7 +579,7 @@ onUnmounted(() => {
 
     <!-- 空状态提示 -->
     <div v-if="!loading && (!hasSearched || data.length === 0)"
-      class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-gray-200">
+      class="flex flex-col items-center justify-center py-20 bg-white/80 rounded-xl border border-gray-200 shadow-sm">
       <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
