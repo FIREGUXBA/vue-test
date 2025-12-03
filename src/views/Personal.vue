@@ -13,7 +13,7 @@ import { getUserInfo, getUserInfoField } from '../utils/user'
 
 // 注入全局数据和方法
 const data = inject('data')
-const showToast = inject('showToast', () => {})
+const showToast = inject('showToast', () => { })
 
 // 当前用户数据（从API获取）
 const personalData = ref({})
@@ -31,7 +31,7 @@ const getEmployeeId = () => {
     return jobNo
   }
 
-  
+
   // 如果都没有，返回null
   console.warn('未找到员工ID，请检查URL参数或用户信息')
   return null
@@ -44,18 +44,18 @@ const transformApiData = (apiDataArray) => {
     stats: {},
     employee: null
   }
-  
+
   if (!Array.isArray(apiDataArray)) {
     return result
   }
-  
+
   // 遍历API返回的数据，按月份组织
   apiDataArray.forEach(item => {
     const month = item.period // 格式: "2025-08"
-    
+
     // 存储日均工时
     result.monthlyHours[month] = item.avg_work_hours || 0
-    
+
     // 存储该月的统计数据
     result.stats[month] = {
       missingCard: item.card_fix_count || 0,
@@ -66,13 +66,13 @@ const transformApiData = (apiDataArray) => {
       totalHours: item.total_work_hours || 0,
       workDays: item.work_days || 0
     }
-    
+
     // 保存员工信息（取第一条）
     if (!result.employee && item.employee) {
       result.employee = item.employee
     }
   })
-  
+
   return result
 }
 
@@ -91,26 +91,26 @@ const fetchPersonalData = async (year = null) => {
     showToast('未找到员工ID，请先登录', 'error')
     return
   }
-  
+
   // 如果没有指定年份，使用当前年份
   const targetYear = year || currentYear.value
-  
+
   // 如果该年份的数据已加载，则跳过
   if (hasYearData(targetYear)) {
     return
   }
-  
+
   // 获取该年份的所有月份
   const yearMonths = allMonthKeys.filter(month => month.startsWith(targetYear + '-'))
   if (yearMonths.length === 0) {
     showToast('该年份没有可用数据', 'error')
     return
   }
-  
+
   // 该年份的第一个月和最后一个月
   const startMonth = yearMonths[0]
   const endMonth = yearMonths[yearMonths.length - 1]
-  
+
   loading.value = true
   try {
     const result = await queryPersonalData({
@@ -118,10 +118,10 @@ const fetchPersonalData = async (year = null) => {
       end_month: endMonth,
       employee_id: employeeId
     })
-    
+
     // 转换数据格式（合并到现有数据中，而不是替换）
     const newData = transformApiData(result)
-    
+
     // 合并数据：保留其他年份的数据，更新当前年份的数据
     personalData.value = {
       monthlyHours: {
@@ -134,7 +134,7 @@ const fetchPersonalData = async (year = null) => {
       },
       employee: newData.employee || personalData.value.employee
     }
-    
+
     // 标记该年份已加载
     loadedYears.value.add(targetYear)
   } catch (error) {
@@ -156,7 +156,7 @@ const fetchPersonalData = async (year = null) => {
 // 当前用户数据（兼容原有代码结构）
 const currentUser = computed(() => {
   const monthStats = personalData.value.stats?.[currentMonth.value] || {}
-  
+
   return {
     monthlyHours: personalData.value.monthlyHours || {},
     stats: {
@@ -203,12 +203,12 @@ const currentYearMonths = computed(() => {
 const changeYear = async (direction) => {
   const targetYear = direction === 'prev' ? currentYear.value - 1 : currentYear.value + 1
   const targetYearMonths = allMonthKeys.filter(month => month.startsWith(targetYear + '-'))
-  
+
   if (targetYearMonths.length > 0) {
     // 保持当前月份号，如果目标年份没有该月份，则选择最接近的月份
     const currentMonthNum = parseInt(currentMonth.value.split('-')[1])
     let targetMonth = targetYearMonths.find(m => parseInt(m.split('-')[1]) === currentMonthNum)
-    
+
     // 如果目标年份没有对应的月份，选择最接近的月份
     if (!targetMonth) {
       // 优先选择相同或更小的月份号
@@ -218,9 +218,9 @@ const changeYear = async (direction) => {
         targetMonth = targetYearMonths[0]
       }
     }
-    
+
     currentMonth.value = targetMonth
-    
+
     // 如果目标年份的数据未加载，则获取该年份的数据
     if (!hasYearData(targetYear)) {
       await fetchPersonalData(targetYear)
@@ -243,7 +243,7 @@ const canGoNext = computed(() => {
 const changeMonth = (direction) => {
   const currentIndex = allMonthKeys.indexOf(currentMonth.value)
   if (currentIndex === -1) return
-  
+
   if (direction === 'prev') {
     // 切换到上一个月
     if (currentIndex > 0) {
@@ -284,10 +284,10 @@ const monthData = computed(() => {
   // API返回的total_work_hours已经是总工时，不需要再乘以天数
   const totalHours = monthStats.totalHours || (avgDaily * STANDARD_WORK_DAYS)
   const standardTotalHours = STANDARD_WORK_DAYS * STANDARD_DAILY_HOURS
-  
+
   // 达成率百分比
   const percent = Math.min(100, (totalHours / standardTotalHours) * 100)
-  
+
   // 动画逻辑：未挂载时 offset 为周长（即空），挂载后计算实际 offset
   const targetOffset = CIRCUMFERENCE - (percent / 100) * CIRCUMFERENCE
   const strokeDashoffset = isMounted.value ? targetOffset : CIRCUMFERENCE
@@ -322,7 +322,7 @@ const monthData = computed(() => {
 // 计算可以显示的月份数量
 const visibleMonthCount = computed(() => {
   if (containerWidth.value === 0) return 12 // 默认显示12个月
-  
+
   // 计算可用宽度（容器宽度 - 左右按钮宽度 - 内边距）
   const availableWidth = containerWidth.value - BUTTON_WIDTH - 16 // 16px 是容器的 padding
   // 计算可以显示的月份数量
@@ -336,14 +336,14 @@ const monthlyTrend = computed(() => {
   // 只获取当前年份的月份
   const yearMonths = currentYearMonths.value
   const count = visibleMonthCount.value
-  
+
   // 如果显示的月份数量等于或大于当前年份的月份数量，直接返回所有月份
   if (count >= yearMonths.length) {
     return yearMonths.map(month => {
       const hours = currentUser.value.monthlyHours?.[month] || 0
       const monthNum = parseInt(month.split('-')[1])
       const labels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
-      
+
       return {
         month,
         label: labels[monthNum - 1],
@@ -352,30 +352,30 @@ const monthlyTrend = computed(() => {
       }
     })
   }
-  
+
   // 需要均匀分布：找到当前月份在数组中的位置
   const currentIndex = yearMonths.findIndex(m => m === currentMonth.value)
   const currentPos = currentIndex >= 0 ? currentIndex : yearMonths.length - 1
-  
+
   // 计算起始索引，使当前月份尽量居中
   let startIndex = Math.max(0, Math.min(
     currentPos - Math.floor(count / 2),
     yearMonths.length - count
   ))
-  
+
   // 如果当前月份在最后几个，从末尾开始显示
   if (currentPos >= yearMonths.length - Math.ceil(count / 2)) {
     startIndex = yearMonths.length - count
   }
-  
+
   // 获取要显示的月份
   const visibleMonths = yearMonths.slice(startIndex, startIndex + count)
-  
+
   return visibleMonths.map(month => {
     const hours = currentUser.value.monthlyHours?.[month] || 0
     const monthNum = parseInt(month.split('-')[1])
     const labels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
-    
+
     return {
       month,
       label: labels[monthNum - 1],
@@ -397,10 +397,10 @@ const abnormalStats = computed(() => [
 const getColorClass = (color) => {
   const map = {
     orange: { bg: 'bg-orange-50', text: 'text-orange-600', iconBg: 'bg-orange-100/50', ring: 'ring-orange-500/20' },
-    blue:   { bg: 'bg-blue-50',   text: 'text-blue-600',   iconBg: 'bg-blue-100/50',   ring: 'ring-blue-500/20' },
+    blue: { bg: 'bg-blue-50', text: 'text-blue-600', iconBg: 'bg-blue-100/50', ring: 'ring-blue-500/20' },
     purple: { bg: 'bg-purple-50', text: 'text-purple-600', iconBg: 'bg-purple-100/50', iconText: 'text-purple-600', ring: 'ring-purple-500/20' },
-    cyan:   { bg: 'bg-cyan-50',   text: 'text-cyan-600',   iconBg: 'bg-cyan-100/50',   ring: 'ring-cyan-500/20' },
-    red:    { bg: 'bg-red-50',    text: 'text-red-600',    iconBg: 'bg-red-100/50',    ring: 'ring-red-500/20' },
+    cyan: { bg: 'bg-cyan-50', text: 'text-cyan-600', iconBg: 'bg-cyan-100/50', ring: 'ring-cyan-500/20' },
+    red: { bg: 'bg-red-50', text: 'text-red-600', iconBg: 'bg-red-100/50', ring: 'ring-red-500/20' },
   }
   return map[color] || map.blue
 }
@@ -425,7 +425,7 @@ watch(loading, (newLoading) => {
           const width = trendContainerRef.value.offsetWidth
           if (width > 0) {
             containerWidth.value = width
-            
+
             // 使用 ResizeObserver 监听宽度变化
             if (typeof ResizeObserver !== 'undefined') {
               if (resizeObserver) {
@@ -465,7 +465,7 @@ watch(loading, (newLoading) => {
 onMounted(() => {
   // 获取当前年份的个人数据
   fetchPersonalData(currentYear.value)
-  
+
   // 稍微延迟触发动画，确保 DOM 渲染完成
   setTimeout(() => {
     isMounted.value = true
@@ -490,243 +490,240 @@ onUnmounted(() => {
         <p class="text-sm text-gray-500">正在加载数据...</p>
       </div>
     </div>
-    
+
     <!-- 主要内容 -->
     <div v-else>
-    <div class="flex justify-between items-end mb-8 px-1 animate-enter" style="--stagger: 0">
-      <div>
-        <h2 class="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-          工时看板
-        </h2>
-        <p class="text-[13px] text-gray-500 mt-1 font-medium">实时追踪您的工时投入与考勤状况</p>
-      </div>
-      
-      <div class="flex items-center gap-2 z-20">
-        <button
-          @click="changeYear('prev')"
-          :disabled="!canGoPrev"
-          class="flex items-center justify-center w-9 h-9 rounded-xl bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-4 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
-          :class="canGoPrev ? 'cursor-pointer' : 'cursor-not-allowed'"
-        >
-          <IconChevronRight class="w-4 h-4 text-gray-600 rotate-180" />
-        </button>
-        
-        <div class="flex items-center gap-2 px-4 py-2 bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 rounded-xl shadow-sm min-w-[100px] justify-center">
-          <IconCalendar class="w-3.5 h-3.5 text-gray-400" />
-          <span class="text-[13px] font-semibold text-gray-700">{{ currentYear }}年</span>
+      <div class="flex justify-between items-end mb-8 px-1 animate-enter" style="--stagger: 0">
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+            工时看板
+          </h2>
+          <p class="text-[13px] text-gray-500 mt-1 font-medium">实时追踪您的工时投入与考勤状况</p>
         </div>
-        
-        <button
-          @click="changeYear('next')"
-          :disabled="!canGoNext"
-          class="flex items-center justify-center w-9 h-9 rounded-xl bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-4 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
-          :class="canGoNext ? 'cursor-pointer' : 'cursor-not-allowed'"
-        >
-          <IconChevronRight class="w-4 h-4 text-gray-600" />
-        </button>
-      </div>
-    </div>
 
-    <div class=" rounded-[20px] p-1.5 mb-5 animate-enter" style="--stagger: 0.5" ref="trendContainerRef">
-      <div class="flex items-center gap-2">
-        <button
-          @click="changeMonth('prev')"
-          :disabled="!canGoPrevMonth"
-          class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-2 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
-          :class="canGoPrevMonth ? 'cursor-pointer' : 'cursor-not-allowed'"
-        >
-          <IconChevronRight class="w-4 h-4 text-gray-600 rotate-180" />
-        </button>
-        
-        <div class="flex items-center gap-1 py-1 px-1 flex-1" :style="{ gap: `${MONTH_ITEM_GAP}px` }">
-          <button v-for="item in monthlyTrend" :key="item.month" @click="currentMonth = item.month"
-            class="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden"
-            :style="monthItemStyle"
-            :class="item.isCurrent 
-              ? 'bg-transparent shadow-lg shadow-blue-200/50 text-blue-700 ring-2 ring-blue-400/50 border border-blue-300/30 scale-105' 
-              : 'bg-transparent hover:bg-blue-50/60 hover:shadow-md hover:shadow-blue-200/30 hover:ring-1 hover:ring-blue-300/40 hover:scale-105 text-gray-600 hover:text-blue-600'">
-            <!-- <div v-if="item.isCurrent"
-              class="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-1.5 bg-blue-500 rounded-t-full shadow-sm"></div> -->
-            <span class="text-xs font-bold transition-colors duration-300" :class="item.isCurrent ? 'text-blue-700' : 'group-hover:text-blue-600'">{{ item.label }}</span>
-            <div class="h-8 w-1.5 bg-gray-200 rounded-full flex items-end overflow-hidden shadow-inner">
-              <div class="w-full rounded-full transition-all duration-500"
-                :class="item.isCurrent ? 'bg-gradient-to-t from-blue-600 to-blue-400 shadow-sm' : 'bg-gradient-to-t from-blue-400 to-blue-300 group-hover:from-blue-500 group-hover:to-blue-400'"
-                :style="{ height: Math.min(100, (item.hours / 12) * 100) + '%' }"></div>
-            </div>
-            <span class="text-[10px] font-mono transition-colors duration-300" :class="item.isCurrent ? 'text-blue-600 opacity-90' : 'opacity-70 group-hover:text-blue-500 group-hover:opacity-90'">{{ item.hours.toFixed(1) }}</span>
+        <div class="flex items-center gap-2 z-20">
+          <button @click="changeYear('prev')" :disabled="!canGoPrev"
+            class="flex items-center justify-center w-9 h-9 rounded-xl bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-4 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
+            :class="canGoPrev ? 'cursor-pointer' : 'cursor-not-allowed'">
+            <IconChevronRight class="w-4 h-4 text-gray-600 rotate-180" />
+          </button>
+
+          <div
+            class="flex items-center gap-2 px-4 py-2 bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 rounded-xl shadow-sm min-w-[100px] justify-center">
+            <IconCalendar class="w-3.5 h-3.5 text-gray-400" />
+            <span class="text-[13px] font-semibold text-gray-700">{{ currentYear }}年</span>
+          </div>
+
+          <button @click="changeYear('next')" :disabled="!canGoNext"
+            class="flex items-center justify-center w-9 h-9 rounded-xl bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-4 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
+            :class="canGoNext ? 'cursor-pointer' : 'cursor-not-allowed'">
+            <IconChevronRight class="w-4 h-4 text-gray-600" />
           </button>
         </div>
-        
-        <button
-          @click="changeMonth('next')"
-          :disabled="!canGoNextMonth"
-          class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-2 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
-          :class="canGoNextMonth ? 'cursor-pointer' : 'cursor-not-allowed'"
-        >
-          <IconChevronRight class="w-4 h-4 text-gray-600" />
-        </button>
       </div>
-    </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10 animate-enter font-sans" style="--stagger: 1">
-      
-      <div class="group relative overflow-hidden rounded-[32px] bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 flex flex-col justify-between transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:border-gray-200">
-        <div class="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-blue-50/50 to-indigo-50/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none -ml-16 -mb-16"></div>
+      <div class=" rounded-[20px] p-1.5 mb-5 animate-enter" style="--stagger: 0.5" ref="trendContainerRef">
+        <div class="flex items-center gap-2">
+          <button @click="changeMonth('prev')" :disabled="!canGoPrevMonth"
+            class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-2 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
+            :class="canGoPrevMonth ? 'cursor-pointer' : 'cursor-not-allowed'">
+            <IconChevronRight class="w-4 h-4 text-gray-600 rotate-180" />
+          </button>
 
-        <div class="flex justify-between items-start mb-8 z-10">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 shadow-sm shadow-blue-100">
-              <IconClock class="w-5 h-5" />
-            </div>
-            <span class="text-[13px] font-bold text-gray-400 uppercase tracking-wider">月总时长</span>
-          </div>
-          
-          <div class="px-3 py-1 bg-gray-50 rounded-full border border-gray-100 flex items-center gap-2">
-             <div class="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-             <span class="text-xs font-semibold text-gray-500">标准 {{ monthData.standardTotalHours }} h</span>
-          </div>
-        </div>
-
-        <div class="mb-8 z-10">
-           <div class="flex items-baseline gap-2">
-             <span class="text-5xl font-bold text-gray-900 tracking-tight font-sf-display">
-               {{ monthData.totalHours }}
-             </span>
-             <span class="text-lg text-gray-400 font-medium">h</span>
-          </div>
-        </div>
-
-        <div class="relative w-full z-10">
-          <div 
-            class="absolute -top-7 transform -translate-x-1/2 flex flex-col items-center transition-all duration-500"
-            :style="{ left: monthData.standardTotalPercent + '%' }"
-          >
-            <span class="text-[10px] font-bold text-gray-400 bg-white border border-gray-100 px-1.5 py-0.5 rounded shadow-sm">{{ monthData.standardTotalHours }}h</span>
-            <div class="w-px h-2 bg-gray-200 mt-0.5"></div>
+          <div class="flex items-center gap-1 py-1 px-1 flex-1" :style="{ gap: `${MONTH_ITEM_GAP}px` }">
+            <button v-for="item in monthlyTrend" :key="item.month" @click="currentMonth = item.month"
+              class="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden"
+              :style="monthItemStyle"
+              :class="item.isCurrent
+                ? 'bg-transparent shadow-lg shadow-blue-200/50 text-blue-700 ring-2 ring-blue-400/50 border border-blue-300/30 scale-105'
+                : 'bg-transparent hover:bg-blue-50/60 hover:shadow-md hover:shadow-blue-200/30 hover:ring-1 hover:ring-blue-300/40 hover:scale-105 text-gray-600 hover:text-blue-600'">
+              <!-- <div v-if="item.isCurrent"
+              class="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-1.5 bg-blue-500 rounded-t-full shadow-sm"></div> -->
+              <span class="text-xs font-bold transition-colors duration-300"
+                :class="item.isCurrent ? 'text-blue-700' : 'group-hover:text-blue-600'">{{ item.label }}</span>
+              <div class="h-8 w-1.5 bg-gray-200 rounded-full flex items-end overflow-hidden shadow-inner">
+                <div class="w-full rounded-full transition-all duration-500"
+                  :class="item.isCurrent ? 'bg-gradient-to-t from-blue-600 to-blue-400 shadow-sm' : 'bg-gradient-to-t from-blue-400 to-blue-300 group-hover:from-blue-500 group-hover:to-blue-400'"
+                  :style="{ height: Math.min(100, (item.hours / 12) * 100) + '%' }"></div>
+              </div>
+              <span class="text-[10px] font-mono transition-colors duration-300"
+                :class="item.isCurrent ? 'text-blue-600 opacity-90' : 'opacity-70 group-hover:text-blue-500 group-hover:opacity-90'">{{
+                  item.hours.toFixed(1) }}</span>
+            </button>
           </div>
 
-          <div class="h-4 w-full bg-gray-100 rounded-full overflow-hidden shadow-inner ring-1 ring-gray-900/5">
-            <div 
-              class="h-full rounded-full transition-all duration-[1500ms] ease-[cubic-bezier(0.25,1,0.5,1)] relative"
-              :class="monthData.animatedTotalPercent >= monthData.standardTotalPercent ? 'bg-gradient-to-r from-blue-400 to-blue-500' : 'bg-gradient-to-r from-blue-300 to-blue-400'"
-              :style="{ width: monthData.animatedTotalPercent + '%' }"
-            >
-              <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
-            </div>
-          </div>
-          
-          <div class="flex justify-between mt-2 px-1">
-            <span class="text-[10px] font-medium text-gray-300">0h</span>
-            <span class="text-[10px] font-medium text-gray-300">{{ Math.round(monthData.maxTotalHours) }}h+</span>
-          </div>
+          <button @click="changeMonth('next')" :disabled="!canGoNextMonth"
+            class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-2 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
+            :class="canGoNextMonth ? 'cursor-pointer' : 'cursor-not-allowed'">
+            <IconChevronRight class="w-4 h-4 text-gray-600" />
+          </button>
         </div>
       </div>
 
-      <div class="group relative overflow-hidden rounded-[32px] bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 flex flex-col justify-between transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:border-gray-200">
-        <div class="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-emerald-50/50 to-teal-50/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none -ml-16 -mb-16"></div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10 animate-enter font-sans" style="--stagger: 1">
 
-        <div class="flex justify-between items-start mb-8 z-10">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-sm shadow-emerald-100">
-              <IconTrendUp class="w-5 h-5" />
+        <div
+          class="group relative overflow-hidden rounded-[32px] bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 flex flex-col justify-between transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:border-gray-200">
+          <div
+            class="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-blue-50/50 to-indigo-50/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none -ml-16 -mb-16">
+          </div>
+
+          <div class="flex justify-between items-start mb-8 z-10">
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 shadow-sm shadow-blue-100">
+                <IconClock class="w-5 h-5" />
+              </div>
+              <span class="text-[13px] font-bold text-gray-400 uppercase tracking-wider">月总时长</span>
             </div>
-            <span class="text-[13px] font-bold text-gray-400 uppercase tracking-wider">日均时长</span>
-          </div>
-          
-          <div class="px-3 py-1 bg-gray-50 rounded-full border border-gray-100 flex items-center gap-2">
-             <div class="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-             <span class="text-xs font-semibold text-gray-500">标准 {{ monthData.standardDays }} 天</span>
-          </div>
-        </div>
 
-        <div class="mb-8 z-10">
-           <div class="flex items-baseline gap-2">
-             <span class="text-5xl font-bold text-gray-900 tracking-tight font-sf-display">
-               {{ monthData.avgDaily }}
-             </span>
-             <span class="text-lg text-gray-400 font-medium">h / 天</span>
-          </div>
-        </div>
-
-        <div class="relative w-full z-10">
-          <div 
-            class="absolute -top-7 transform -translate-x-1/2 flex flex-col items-center transition-all duration-500"
-            :style="{ left: monthData.standardDailyPercent + '%' }"
-          >
-            <span class="text-[10px] font-bold text-gray-400 bg-white border border-gray-100 px-1.5 py-0.5 rounded shadow-sm">9h</span>
-            <div class="w-px h-2 bg-gray-200 mt-0.5"></div>
-          </div>
-
-          <div class="h-4 w-full bg-gray-100 rounded-full overflow-hidden shadow-inner ring-1 ring-gray-900/5">
-            <div 
-              class="h-full rounded-full transition-all duration-[1500ms] ease-[cubic-bezier(0.25,1,0.5,1)] relative"
-              :class="monthData.avgDaily >= 9 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : 'bg-gradient-to-r from-orange-300 to-orange-400'"
-              :style="{ width: monthData.animatedDailyPercent + '%' }"
-            >
-              <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
-            </div>
-          </div>
-          
-          <div class="flex justify-between mt-2 px-1">
-            <span class="text-[10px] font-medium text-gray-300">0h</span>
-            <span class="text-[10px] font-medium text-gray-300">12h+</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="animate-enter" style="--stagger: 2">
-      <div class="mb-5 flex items-center gap-3 px-1">
-        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-          <div class="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-          考勤异常统计
-        </h3>
-        <div class="h-px flex-1 bg-gradient-to-r from-gray-200/80 to-transparent"></div>
-      </div>
-
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div 
-          v-for="(item, index) in abnormalStats" 
-          :key="index"
-          class="relative overflow-hidden bg-white/70 border rounded-[22px] p-4 transition-all duration-300 hover:bg-white hover:scale-[1.03] hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.08)] flex flex-col justify-between min-h-[120px] group cursor-default"
-          :class="[
-            item.value > 0 ? getColorClass(item.color).text + ' ' + 'border-gray-100' : 'border-gray-100/50 text-gray-300',
-            item.value > 0 ? 'hover:border-' + item.color + '-200' : ''
-          ]"
-        >
-          <div v-if="item.value > 0" class="absolute -right-4 -top-4 w-16 h-16 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" :class="getColorClass(item.color).bg"></div>
-
-          <div class="flex justify-between items-start relative z-10">
-            <div 
-              class="w-9 h-9 rounded-[12px] flex items-center justify-center transition-all duration-300"
-              :class="item.value > 0 ? getColorClass(item.color).iconBg : 'bg-gray-100/50'"
-            >
-              <component 
-                :is="item.icon === 'IconClock' ? IconClock : 
-                     item.icon === 'IconCalendar' ? IconCalendar :
-                     item.icon === 'IconBriefcase' ? IconBriefcase :
-                     item.icon === 'IconFileText' ? IconFileText :
-                     IconCalendarDays" 
-                class="w-4 h-4 transition-transform duration-300 group-hover:scale-110"
-                :class="item.value > 0 ? 'text-current' : 'text-gray-400'"
-              />
+            <div class="px-3 py-1 bg-gray-50 rounded-full border border-gray-100 flex items-center gap-2">
+              <div class="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
+              <span class="text-xs font-semibold text-gray-500">标准 {{ monthData.standardTotalHours }} h</span>
             </div>
           </div>
 
-          <div class="mt-3 relative z-10">
-            <div class="flex items-baseline gap-1">
-              <span class="text-3xl font-bold font-sf-display tracking-tight transition-all duration-300"
-                :class="item.value > 0 ? 'scale-100' : 'scale-95 origin-left'"
-              >
-                {{ item.value }}
+          <div class="mb-8 z-10">
+            <div class="flex items-baseline gap-2">
+              <span class="text-5xl font-bold text-gray-900 tracking-tight font-sf-display">
+                {{ monthData.totalHours }}
               </span>
-              <span class="text-[11px] font-medium opacity-60" v-if="item.value > 0">{{ item.unit }}</span>
+              <span class="text-lg text-gray-400 font-medium">h</span>
             </div>
-            <div class="text-[11px] font-semibold mt-1 transition-colors duration-300" :class="item.value > 0 ? 'text-gray-500' : 'text-gray-400'">{{ item.label }}</div>
+          </div>
+
+          <div class="relative w-full z-10">
+            <div
+              class="absolute -top-7 transform -translate-x-1/2 flex flex-col items-center transition-all duration-500"
+              :style="{ left: monthData.standardTotalPercent + '%' }">
+              <span
+                class="text-[10px] font-bold text-gray-400 bg-white border border-gray-100 px-1.5 py-0.5 rounded shadow-sm">{{
+                  monthData.standardTotalHours }}h</span>
+              <div class="w-px h-2 bg-gray-200 mt-0.5"></div>
+            </div>
+
+            <div class="h-4 w-full bg-gray-100 rounded-full overflow-hidden shadow-inner ring-1 ring-gray-900/5">
+              <div
+                class="h-full rounded-full transition-all duration-[1500ms] ease-[cubic-bezier(0.25,1,0.5,1)] relative"
+                :class="monthData.animatedTotalPercent >= monthData.standardTotalPercent ? 'bg-gradient-to-r from-blue-400 to-blue-500' : 'bg-gradient-to-r from-blue-300 to-blue-400'"
+                :style="{ width: monthData.animatedTotalPercent + '%' }">
+                <div
+                  class="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full animate-[shimmer_2s_infinite]">
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-between mt-2 px-1">
+              <span class="text-[10px] font-medium text-gray-300">0h</span>
+              <span class="text-[10px] font-medium text-gray-300">{{ Math.round(monthData.maxTotalHours) }}h+</span>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="group relative overflow-hidden rounded-[32px] bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 flex flex-col justify-between transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:border-gray-200">
+          <div
+            class="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-emerald-50/50 to-teal-50/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none -ml-16 -mb-16">
+          </div>
+
+          <div class="flex justify-between items-start mb-8 z-10">
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-sm shadow-emerald-100">
+                <IconTrendUp class="w-5 h-5" />
+              </div>
+              <span class="text-[13px] font-bold text-gray-400 uppercase tracking-wider">日均时长</span>
+            </div>
+
+            <div class="px-3 py-1 bg-gray-50 rounded-full border border-gray-100 flex items-center gap-2">
+              <div class="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
+              <span class="text-xs font-semibold text-gray-500">标准 {{ monthData.standardDays }} 天</span>
+            </div>
+          </div>
+
+          <div class="mb-8 z-10">
+            <div class="flex items-baseline gap-2">
+              <span class="text-5xl font-bold text-gray-900 tracking-tight font-sf-display">
+                {{ monthData.avgDaily }}
+              </span>
+              <span class="text-lg text-gray-400 font-medium">h / 天</span>
+            </div>
+          </div>
+
+          <div class="relative w-full z-10">
+            <div
+              class="absolute -top-7 transform -translate-x-1/2 flex flex-col items-center transition-all duration-500"
+              :style="{ left: monthData.standardDailyPercent + '%' }">
+              <span
+                class="text-[10px] font-bold text-gray-400 bg-white border border-gray-100 px-1.5 py-0.5 rounded shadow-sm">9h</span>
+              <div class="w-px h-2 bg-gray-200 mt-0.5"></div>
+            </div>
+
+            <div class="h-4 w-full bg-gray-100 rounded-full overflow-hidden shadow-inner ring-1 ring-gray-900/5">
+              <div
+                class="h-full rounded-full transition-all duration-[1500ms] ease-[cubic-bezier(0.25,1,0.5,1)] relative"
+                :class="monthData.avgDaily >= 9 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : 'bg-gradient-to-r from-orange-300 to-orange-400'"
+                :style="{ width: monthData.animatedDailyPercent + '%' }">
+                <div
+                  class="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full animate-[shimmer_2s_infinite]">
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-between mt-2 px-1">
+              <span class="text-[10px] font-medium text-gray-300">0h</span>
+              <span class="text-[10px] font-medium text-gray-300">12h+</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <div class="animate-enter" style="--stagger: 2">
+        <div class="mb-5 flex items-center gap-3 px-1">
+          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+            <div class="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
+            考勤异常统计
+          </h3>
+          <div class="h-px flex-1 bg-gradient-to-r from-gray-200/80 to-transparent"></div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div v-for="(item, index) in abnormalStats" :key="index"
+            class="relative overflow-hidden bg-white/70 border rounded-[22px] p-4 transition-all duration-300 hover:bg-white hover:scale-[1.03] hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.08)] flex flex-col justify-between min-h-[120px] group cursor-default"
+            :class="[
+              item.value > 0 ? getColorClass(item.color).text + ' ' + 'border-gray-100' : 'border-gray-100/50 text-gray-300',
+              item.value > 0 ? 'hover:border-' + item.color + '-200' : ''
+            ]">
+            <div v-if="item.value > 0"
+              class="absolute -right-4 -top-4 w-16 h-16 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+              :class="getColorClass(item.color).bg"></div>
+
+            <div class="flex justify-between items-start relative z-10">
+              <div class="w-9 h-9 rounded-[12px] flex items-center justify-center transition-all duration-300"
+                :class="item.value > 0 ? getColorClass(item.color).iconBg : 'bg-gray-100/50'">
+                <component :is="item.icon === 'IconClock' ? IconClock :
+                  item.icon === 'IconCalendar' ? IconCalendar :
+                    item.icon === 'IconBriefcase' ? IconBriefcase :
+                      item.icon === 'IconFileText' ? IconFileText :
+                        IconCalendarDays" class="w-4 h-4 transition-transform duration-300 group-hover:scale-110"
+                  :class="item.value > 0 ? 'text-current' : 'text-gray-400'" />
+              </div>
+            </div>
+
+            <div class="mt-3 relative z-10">
+              <div class="flex items-baseline gap-1">
+                <span class="text-3xl font-bold font-sf-display tracking-tight transition-all duration-300"
+                  :class="item.value > 0 ? 'scale-100' : 'scale-95 origin-left'">
+                  {{ item.value }}
+                </span>
+                <span class="text-[11px] font-medium opacity-60" v-if="item.value > 0">{{ item.unit }}</span>
+              </div>
+              <div class="text-[11px] font-semibold mt-1 transition-colors duration-300"
+                :class="item.value > 0 ? 'text-gray-500' : 'text-gray-400'">{{ item.label }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     <!-- 结束主要内容 -->
   </div>
@@ -749,6 +746,7 @@ onUnmounted(() => {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -756,9 +754,11 @@ onUnmounted(() => {
 }
 
 .animate-enter {
-  opacity: 0; /* 初始隐藏 */
+  opacity: 0;
+  /* 初始隐藏 */
   animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-  animation-delay: calc(var(--stagger) * 120ms); /* 根据变量延迟 */
+  animation-delay: calc(var(--stagger) * 120ms);
+  /* 根据变量延迟 */
 }
 
 /* 进度条扫光动画 */
