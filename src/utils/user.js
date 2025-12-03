@@ -275,6 +275,91 @@ export function getUserInfoField(key, defaultValue = null) {
   return userInfo?.[key] ?? defaultValue
 }
 
+/**
+ * 检查当前用户是否是管理员
+ * 判断逻辑：
+ * 1. 检查用户信息中的 role 字段是否为 'admin' 或 '管理员'
+ * 2. 检查用户的 jobNo 是否与 localStorage 中的 adminJobNo 匹配
+ * 3. 检查用户信息中是否有 isAdmin 字段为 true
+ * @returns {boolean} 是否是管理员
+ */
+export function isAdmin() {
+  try {
+    const userInfo = getUserInfo()
+    if (!userInfo) {
+      return false
+    }
+    
+    // 方式1: 检查 role 字段
+    if (userInfo.role) {
+      const role = String(userInfo.role).toLowerCase()
+      if (role === 'admin' || role === '管理员' || role === 'administrator') {
+        return true
+      }
+    }
+    
+    // 方式2: 检查 isAdmin 字段
+    if (userInfo.isAdmin === true || userInfo.is_admin === true) {
+      return true
+    }
+    
+    // 方式3: 检查 jobNo 是否匹配管理员工号
+    if (userInfo.jobNo) {
+      const adminJobNo = localStorage.getItem('adminJobNo')
+      if (adminJobNo && userInfo.jobNo === adminJobNo) {
+        return true
+      }
+    }
+    
+    return false
+  } catch (error) {
+    console.error('检查管理员权限失败:', error)
+    return false
+  }
+}
+
+/**
+ * 在dev模式下保存管理员工号到localStorage
+ * 从环境变量 VITE_ADMIN_JOB_NO 中读取管理员工号
+ * @returns {boolean} 是否成功保存
+ */
+export function saveAdminJobNoInDevMode() {
+  // 检查是否是开发模式
+  if (!import.meta.env.DEV) {
+    return false
+  }
+  
+  // 从环境变量中获取管理员工号
+  const adminJobNo = import.meta.env.VITE_DEV_JOB_NO
+  const adminName = import.meta.env.VITE_DEV_NAME
+  if (!adminJobNo) {
+    console.warn('开发模式下未找到管理员工号环境变量 VITE_ADMIN_JOB_NO')
+    return false
+  }
+  
+  try {
+    // 保存管理员工号到localStorage
+    localStorage.setItem('adminJobNo', adminJobNo)
+    localStorage.setItem('adminName', adminName)
+    // 同时更新用户信息中的jobNo（如果当前没有用户信息或用户信息中没有jobNo）
+    const currentUserInfo = getUserInfo()
+    if (!currentUserInfo || !currentUserInfo.jobNo || !currentUserInfo.name) {
+      const updatedUserInfo = currentUserInfo ? { ...currentUserInfo } : {}
+      updatedUserInfo.jobNo = adminJobNo
+      updatedUserInfo.name = adminName
+      saveUserInfo(updatedUserInfo)
+      console.log('开发模式：已将管理员工号保存到localStorage:', adminJobNo)
+    } else {
+      console.log('开发模式：非管理员工号已存在，跳过覆盖')
+    }
+    
+    return true
+  } catch (error) {
+    console.error('开发模式下保存管理员工号失败:', error)
+    return false
+  }
+}
+
 // 导出默认对象，方便使用
 export default {
   parseUserInfoFromURL,
@@ -285,6 +370,8 @@ export default {
   hasUserInfo,
   initUserInfoFromURL,
   cleanUserInfoFromURL,
-  getUserInfoField
+  getUserInfoField,
+  saveAdminJobNoInDevMode,
+  isAdmin
 }
 
