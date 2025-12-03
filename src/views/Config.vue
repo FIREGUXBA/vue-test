@@ -6,7 +6,8 @@ import IconSave from '../components/icons/IconSave.vue'
 import IconCalendarDays from '../components/icons/IconCalendarDays.vue'
 import IconChevronDown from '../components/icons/IconChevronDown.vue'
 import IconSparkles from '../components/icons/IconSparkles.vue'
-import { getConfigFiles, saveConfig, getConfig, resetConfig, executeProcessExcel, uploadFile } from '../utils/api/modules/config'
+import IconDownload from '../components/icons/IconDownload.vue'
+import { getConfigFiles, saveConfig, getConfig, resetConfig, executeProcessExcel, uploadFile, downloadReportFile } from '../utils/api/modules/config'
 const showToast = inject('showToast')
 //当前选中的月份
 const currentMonth = ref('')
@@ -26,6 +27,8 @@ const OVER_WRITE = ref(false) // 是否覆盖已有数据，默认false
 
 // 是否已经生成报表，默认false
 const hasGeneratedReport = ref(false)
+// 最近生成的文件下载URL
+const latestReportFileUrl = ref('')
 
 // 已保存的配置快照（用于判断是否有未保存的更改）
 const savedConfig = ref({
@@ -59,7 +62,7 @@ const canGenerateReport = computed(() => {
 
 // 判断是否可以下载报表
 const canDownloadReport = computed(() => {
-  return canGenerateReport && hasGeneratedReport.value && !isProcessing.value
+  return hasGeneratedReport.value && latestReportFileUrl.value && !isProcessing.value
 })
 
 // 获取错误提示信息
@@ -73,10 +76,28 @@ const errorMessage = computed(() => {
   }
   return ''
 })
-
+const downloadMessage = computed(() => {
+  if (hasGeneratedReport.value && latestReportFileUrl.value) {
+    // 从URL中提取文件名
+    const filename = latestReportFileUrl.value.split('/').pop() || 'report.xlsx'
+    return filename
+  }
+  if (!canDownloadReport.value) {
+    return '请先生成报表后再下载'
+  }
+  return ''
+})
+// 保存按钮错误提示信息
+const saveErrorMessage = computed(() => {
+  if (!isMonthConsistent.value) {
+    return '月份不一致，无法保存'
+  }
+  return ''
+})
 // hover状态
 const showTooltip = ref(false)
-
+const showTooltip2 = ref(false)
+const showTooltip3 = ref(false)
 // 处理状态
 const isProcessing = ref(false)
 
@@ -203,15 +224,44 @@ const executeProcessExcelFunction = async () => {
   }
   try {
     isProcessing.value = true
-    await executeProcessExcel()
-    showToast('处理成功')
+    const response = await executeProcessExcel()
+    // 保存返回的文件下载URL
+    if (response && response.file_url) {
+      latestReportFileUrl.value = response.file_url
+      hasGeneratedReport.value = true
+      showToast('处理成功，可以下载报表')
+    } else {
+      // 兼容旧版本API，如果没有返回文件URL，仍然标记为已生成
+      hasGeneratedReport.value = true
+      showToast('处理成功')
+    }
     await getCurrentConfig()
     await loadFiles()
   } catch (error) {
     console.error('处理失败:', error)
     showToast('处理失败，请重试', 'error')
+    hasGeneratedReport.value = false
+    latestReportFileUrl.value = ''
   } finally {
     isProcessing.value = false
+  }
+}
+
+// 下载报表函数
+const downloadReport = async () => {
+  if (!latestReportFileUrl.value) {
+    showToast('没有可下载的报表文件', 'error')
+    return
+  }
+  try {
+    // 从URL中提取文件名
+    const filename = latestReportFileUrl.value.split('/').pop() || 'report.xlsx'
+    // 直接使用返回的URL下载文件
+    await downloadReportFile(latestReportFileUrl.value, filename)
+    showToast('报表下载成功')
+  } catch (error) {
+    console.error('下载失败:', error)
+    showToast('报表下载失败，请重试', 'error')
   }
 }
 
@@ -508,15 +558,26 @@ onMounted(() => {
       ]">
         重置
       </button>
-      <button @click="saveConfigFunction" :disabled="isProcessing" :class="[
-        'px-4 py-1.5 text-[13px] font-medium rounded-lg transition-all shadow-sm flex items-center gap-1.5',
-        isProcessing
-          ? 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
-          : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-900 active:scale-95 active:bg-gray-100'
-      ]">
-        <IconSave class="w-3.5 h-3.5"></IconSave>
-        保存配置
-      </button>
+      <div class="relative" @mouseenter="showTooltip3 = true" @mouseleave="showTooltip3 = false">
+        <button @click="saveConfigFunction" :disabled="isProcessing || !isMonthConsistent" :class="[
+          'px-4 py-1.5 text-[13px] font-medium rounded-lg transition-all shadow-sm flex items-center gap-1.5',
+          isProcessing || !isMonthConsistent
+            ? 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
+            : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-900 active:scale-95 active:bg-gray-100'
+        ]">
+          <IconSave class="w-3.5 h-3.5"></IconSave>
+          保存配置
+        </button>
+        <Transition name="tooltip">
+          <div v-if="showTooltip3 && !isProcessing && saveErrorMessage"
+            class="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-[12px] rounded-lg shadow-lg whitespace-nowrap z-50 pointer-events-none">
+            {{ saveErrorMessage }}
+            <div
+              class="absolute top-full right-6 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-gray-900">
+            </div>
+          </div>
+        </Transition>
+      </div>
 
       <div class="relative" @mouseenter="showTooltip = true" @mouseleave="showTooltip = false">
         <button @click="executeProcessExcelFunction" :disabled="!canGenerateReport || isProcessing" :class="[
@@ -539,14 +600,25 @@ onMounted(() => {
           </div>
         </Transition>
       </div>
-      <div class="relative" @mouseenter="showTooltip = true" @mouseleave="showTooltip = false">
-        <button @click="downloadReport" v-if="canDownloadReport" :class="[
+      <div class="relative" @mouseenter="showTooltip2 = true" @mouseleave="showTooltip2 = false">
+        <button @click="downloadReport" :disabled="!canDownloadReport" :class="[
           'px-4 py-1.5 text-[13px] font-medium rounded-lg transition-all shadow-sm flex items-center gap-1.5',
-          'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 active:scale-95 active:bg-gray-100'
+          canDownloadReport
+            ? 'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 active:scale-95 active:bg-gray-100'
+            : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
         ]">
           <IconDownload class="w-3.5 h-3.5"></IconDownload>
           下载报表
         </button>
+        <Transition name="tooltip">
+          <div v-if="showTooltip2 && !isProcessing && downloadMessage"
+            class="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-[12px] rounded-lg shadow-lg whitespace-nowrap z-50 pointer-events-none">
+            {{ downloadMessage }}
+            <div
+              class="absolute top-full right-6 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-gray-900">
+            </div>
+          </div>
+        </Transition>
       </div>
     </div>
   </div>

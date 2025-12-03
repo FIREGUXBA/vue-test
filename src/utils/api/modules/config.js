@@ -1,4 +1,4 @@
-import { get, post, put, del, upload } from '../request'
+import { get, post, put, del, upload, download } from '../request'
 
 /**
  * 获取文件列表
@@ -63,4 +63,15 @@ export const uploadFile = (file) => {
   const formData = new FormData()
   formData.append('file', file)
   return upload('/config/upload', formData)
+}
+
+/**
+ * 下载报表文件
+ * @param {string} fileUrl - 文件下载URL（完整路径，如：/api/config/download/outputs/团队8月考勤统计.xlsx）
+ * @param {string} filename - 文件名
+ * @returns {Promise}
+ */
+export const downloadReportFile = (fileUrl, filename) => {
+  // 直接使用返回的URL下载文件，不需要额外的查询参数
+  return download(fileUrl, filename)
 }
