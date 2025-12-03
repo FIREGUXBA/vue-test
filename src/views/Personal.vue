@@ -26,7 +26,6 @@ const getEmployeeId = () => {
   // 优先从用户信息中获取 jobNo（员工工号）
   const jobNo = getUserInfoField('jobNo')
   if (jobNo) {
-    console.log(jobNo)
     return jobNo
   }
   // 如果都没有，返回null
@@ -153,7 +152,6 @@ const fetchPersonalData = async (year = null) => {
     }
   } finally {
     loading.value = false
-    console.log(personalData.value)
   }
 }
 

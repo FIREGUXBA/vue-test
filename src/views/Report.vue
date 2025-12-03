@@ -151,7 +151,6 @@ const handleQuery = async () => {
     const result = await queryReportData(params)
     data.value = normalizeData(result)
     hasSearched.value = true
-    // console.log(data.value)
     showToast('查询成功', 'success')
   } catch (err) {
     showToast('查询失败，请稍后重试', 'error')

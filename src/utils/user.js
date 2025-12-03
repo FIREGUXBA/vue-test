@@ -305,7 +305,7 @@ export function isAdmin() {
     
     // 方式3: 检查 jobNo 是否匹配管理员工号
     if (userInfo.jobNo) {
-      const adminJobNo = localStorage.getItem('adminJobNo')
+      const adminJobNo = import.meta.env.VITE_ADMIN_JOB_NO
       if (adminJobNo && userInfo.jobNo === adminJobNo) {
         return true
       }
@@ -330,7 +330,7 @@ export function saveAdminJobNoInDevMode() {
   }
   
   // 从环境变量中获取管理员工号
-  const adminJobNo = import.meta.env.VITE_DEV_JOB_NO
+  const adminJobNo = import.meta.env.VITE_ADMIN_JOB_NO
   const adminName = import.meta.env.VITE_DEV_NAME
   if (!adminJobNo) {
     console.warn('开发模式下未找到管理员工号环境变量 VITE_ADMIN_JOB_NO')
