@@ -490,11 +490,10 @@ onUnmounted(() => {
         <div class="h-7 w-px bg-gray-200 transition-opacity duration-300"></div>
 
         <!-- 工时显示模式切换 -->
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-200/50 hover:bg-gray-200 border border-transparent hover:border-blue-500/30 transition-all duration-300">
-          <span class="text-[13px] font-medium text-gray-700">显示模式：</span>
+        <div class="flex items-center gap-2 px-1 py-1 rounded-lg bg-gray-200/50 hover:bg-gray-200 border border-transparent hover:border-blue-500/30 transition-all duration-300">
           <button
             @click="showTotalHours = false"
-            class="px-3 py-1 rounded-md text-[12px] font-medium transition-all duration-200"
+            class="px-2.5 py-1 rounded-md text-[12px] font-medium transition-all duration-200"
             :class="!showTotalHours
               ? 'bg-blue-500 text-white shadow-sm'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
@@ -502,7 +501,7 @@ onUnmounted(() => {
           </button>
           <button
             @click="showTotalHours = true"
-            class="px-3 py-1 rounded-md text-[12px] font-medium transition-all duration-200"
+            class="px-2.5 py-1 rounded-md text-[12px] font-medium transition-all duration-200"
             :class="showTotalHours
               ? 'bg-blue-500 text-white shadow-sm'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">

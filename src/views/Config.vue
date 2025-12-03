@@ -7,7 +7,7 @@ import IconCalendarDays from '../components/icons/IconCalendarDays.vue'
 import IconChevronDown from '../components/icons/IconChevronDown.vue'
 import IconSparkles from '../components/icons/IconSparkles.vue'
 import IconDownload from '../components/icons/IconDownload.vue'
-import { getConfigFiles, saveConfig, getConfig, resetConfig, executeProcessExcel, uploadFile, downloadReportFile } from '../utils/api/modules/config'
+import { getConfigFiles, saveConfig, getConfig, resetConfig, executeProcessExcel, uploadFiles, downloadReportFile } from '../utils/api/modules/config'
 const showToast = inject('showToast')
 //当前选中的月份
 const currentMonth = ref('')
@@ -280,10 +280,10 @@ const handleFileChange = async (event) => {
 }
 
 // 文件上传处理函数
-const uploadFileHandler = async (file) => {
+const uploadFileHandler = async (files) => {
   try {
     isUploading.value = true
-    await uploadFile(file)
+    await uploadFiles(files)
     showToast('文件上传成功')
     // 重新加载文件列表
     await loadFiles()
@@ -316,17 +316,15 @@ const handleDrop = async (event) => {
   event.preventDefault()
   event.stopPropagation()
   isDragging.value = false
+  const validFiles = Array.from(event.dataTransfer.files).filter(f => f.name.endsWith('.xlsx'))
 
-  const file = event.dataTransfer.files?.[0]
-  if (!file) return
+if (validFiles.length === 0) {
+  showToast('请上传 .xlsx 格式的文件', 'error')
+  return
+}
 
-  // 验证文件类型
-  if (!file.name.endsWith('.xlsx')) {
-    showToast('请上传 .xlsx 格式的文件', 'error')
-    return
-  }
+await uploadFileHandler(validFiles)
 
-  await uploadFileHandler(file)
 }
 
 // 点击上传区域触发文件选择
@@ -356,8 +354,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Upload Section (macOS style well) -->
-    <!-- 使用 bg-white 但带有更细腻的阴影，模仿 macOS 的分组 -->
+    <!-- Upload Section 上传文件区域-->
     <div class="bg-white border border-gray-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.03)] rounded-xl overflow-hidden mb-6">
 
       <div class="p-1.5">
@@ -407,7 +404,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Group 1: Data Sources Selection -->
+    <!-- Group 1: Data Sources Selection 数据源选择区域-->
     <div class="bg-white/80 border border-gray-200 shadow-sm rounded-xl overflow-hidden mb-6">
       <!-- Section Header -->
       <div class="px-4 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center justify-end gap-2">

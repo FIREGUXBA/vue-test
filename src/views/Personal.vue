@@ -24,8 +24,7 @@ const currentMonth = ref('')
 // 获取员工ID（从用户信息中获取）
 const getEmployeeId = () => {
   // 优先从用户信息中获取 jobNo（员工工号）
-  //const jobNo = getUserInfoField('jobNo')
-  const jobNo = 'CD0097'
+  const jobNo = getUserInfoField('jobNo')
   if (jobNo) {
     console.log(jobNo)
     return jobNo

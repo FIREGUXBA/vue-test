@@ -56,12 +56,14 @@ export const executeProcessExcel = () => {
 
 /**
  * 上传文件
- * @param {File} file - 要上传的文件
+ * @param {Files[]} files - 要上传的文件列表
  * @returns {Promise}
  */
-export const uploadFile = (file) => {
+export const uploadFiles = (files) => {
   const formData = new FormData()
-  formData.append('file', file)
+  files.forEach(file => {
+    formData.append('file', file)
+  })
   return upload('/config/upload', formData)
 }
 
