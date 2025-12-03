@@ -7,31 +7,29 @@ import IconCalendarDays from '../components/icons/IconCalendarDays.vue'
 import IconTrendUp from '../components/icons/IconTrendUp.vue'
 import IconChevronRight from '../components/icons/IconChevronRight.vue'
 import IconFileText from '../components/icons/IconFileText.vue'
-import { allMonthKeys } from '../utils/data'
 import { queryPersonalData } from '../utils/api/modules/personal'
 import { getUserInfo, getUserInfoField } from '../utils/user'
 
 // 注入全局数据和方法
-const data = inject('data')
+
 const showToast = inject('showToast', () => { })
 
 // 当前用户数据（从API获取）
 const personalData = ref({})
 const loading = ref(false)
 
-// 当前月份
-const currentMonth = ref(allMonthKeys[allMonthKeys.length - 1])
+// 当前月份（初始化为空，等待数据加载后设置）
+const currentMonth = ref('')
 
 // 获取员工ID（从用户信息中获取）
 const getEmployeeId = () => {
   // 优先从用户信息中获取 jobNo（员工工号）
-  const jobNo = getUserInfoField('jobNo')
+  //const jobNo = getUserInfoField('jobNo')
+  const jobNo = 'CD0097'
   if (jobNo) {
     console.log(jobNo)
     return jobNo
   }
-
-
   // 如果都没有，返回null
   console.warn('未找到员工ID，请检查URL参数或用户信息')
   return null
@@ -101,10 +99,16 @@ const fetchPersonalData = async (year = null) => {
   }
 
   // 获取该年份的所有月份
-  const yearMonths = allMonthKeys.filter(month => month.startsWith(targetYear + '-'))
+  // 如果 allMonthKeys 中已有该年份的月份，使用这些月份；否则生成该年份的所有月份（1-12月）
+  let yearMonths = allMonthKeys.value.filter(month => month.startsWith(targetYear + '-'))
+  
+  // 如果 allMonthKeys 中没有该年份的月份（首次加载），生成该年份的所有月份
   if (yearMonths.length === 0) {
-    showToast('该年份没有可用数据', 'error')
-    return
+    yearMonths = []
+    for (let month = 1; month <= 12; month++) {
+      const monthStr = month.toString().padStart(2, '0')
+      yearMonths.push(`${targetYear}-${monthStr}`)
+    }
   }
 
   // 该年份的第一个月和最后一个月
@@ -150,6 +154,7 @@ const fetchPersonalData = async (year = null) => {
     }
   } finally {
     loading.value = false
+    console.log(personalData.value)
   }
 }
 
@@ -170,6 +175,16 @@ const currentUser = computed(() => {
   }
 })
 
+const allMonthKeys = computed(() => {
+  if (!personalData.value.stats || Object.keys(personalData.value.stats).length === 0) {
+    return []
+  }
+  // 从 stats 的键中获取所有月份，并按时间排序
+  return Object.keys(personalData.value.stats).sort((a, b) => {
+    // 格式: "2025-08"，按字符串比较即可（因为格式固定）
+    return a.localeCompare(b)
+  })
+})
 // 容器宽度和月份显示数量
 const trendContainerRef = ref(null)
 const containerWidth = ref(0)
@@ -191,22 +206,33 @@ const monthItemStyle = computed(() => {
 
 // 当前年份
 const currentYear = computed(() => {
+  if (!currentMonth.value) {
+    // 如果没有当前月份，返回当前系统年份
+    return new Date().getFullYear()
+  }
   return parseInt(currentMonth.value.split('-')[0])
 })
 
 // 获取当前年份的所有月份
 const currentYearMonths = computed(() => {
-  return allMonthKeys.filter(month => month.startsWith(currentYear.value + '-'))
+  return allMonthKeys.value.filter(month => month.startsWith(currentYear.value + '-'))
 })
 
 // 切换年份
 const changeYear = async (direction) => {
   const targetYear = direction === 'prev' ? currentYear.value - 1 : currentYear.value + 1
-  const targetYearMonths = allMonthKeys.filter(month => month.startsWith(targetYear + '-'))
-
+  
+  // 如果目标年份的数据未加载，先获取数据
+  if (!hasYearData(targetYear)) {
+    await fetchPersonalData(targetYear)
+  }
+  
+  // 获取该年份的所有月份
+  const targetYearMonths = allMonthKeys.value.filter(month => month.startsWith(targetYear + '-'))
+  
   if (targetYearMonths.length > 0) {
     // 保持当前月份号，如果目标年份没有该月份，则选择最接近的月份
-    const currentMonthNum = parseInt(currentMonth.value.split('-')[1])
+    const currentMonthNum = currentMonth.value ? parseInt(currentMonth.value.split('-')[1]) : 1
     let targetMonth = targetYearMonths.find(m => parseInt(m.split('-')[1]) === currentMonthNum)
 
     // 如果目标年份没有对应的月份，选择最接近的月份
@@ -220,58 +246,51 @@ const changeYear = async (direction) => {
     }
 
     currentMonth.value = targetMonth
-
-    // 如果目标年份的数据未加载，则获取该年份的数据
-    if (!hasYearData(targetYear)) {
-      await fetchPersonalData(targetYear)
-    }
   }
 }
 
 // 检查是否可以切换到上一年/下一年
 const canGoPrev = computed(() => {
   const prevYear = currentYear.value - 1
-  return allMonthKeys.some(month => month.startsWith(prevYear + '-'))
+  return allMonthKeys.value.some(month => month.startsWith(prevYear + '-'))
 })
 
 const canGoNext = computed(() => {
   const nextYear = currentYear.value + 1
-  return allMonthKeys.some(month => month.startsWith(nextYear + '-'))
+  return allMonthKeys.value.some(month => month.startsWith(nextYear + '-'))
 })
 
-// 切换月份
+// 切换月份（只切换到有数据的月份）
 const changeMonth = (direction) => {
-  const currentIndex = allMonthKeys.indexOf(currentMonth.value)
+  const currentIndex = allMonthKeys.value.indexOf(currentMonth.value)
   if (currentIndex === -1) return
 
   if (direction === 'prev') {
-    // 切换到上一个月
+    // 切换到上一个月（有数据的）
     if (currentIndex > 0) {
-      currentMonth.value = allMonthKeys[currentIndex - 1]
+      currentMonth.value = allMonthKeys.value[currentIndex - 1]
     }
   } else if (direction === 'next') {
-    // 切换到下一个月
-    if (currentIndex < allMonthKeys.length - 1) {
-      currentMonth.value = allMonthKeys[currentIndex + 1]
+    // 切换到下一个月（有数据的）
+    if (currentIndex < allMonthKeys.value.length - 1) {
+      currentMonth.value = allMonthKeys.value[currentIndex + 1]
     }
   }
 }
 
 // 检查是否可以切换到上一个月/下一个月
 const canGoPrevMonth = computed(() => {
-  const currentIndex = allMonthKeys.indexOf(currentMonth.value)
+  const currentIndex = allMonthKeys.value.indexOf(currentMonth.value)
   return currentIndex > 0
 })
 
 const canGoNextMonth = computed(() => {
-  const currentIndex = allMonthKeys.indexOf(currentMonth.value)
-  return currentIndex < allMonthKeys.length - 1
+  const currentIndex = allMonthKeys.value.indexOf(currentMonth.value)
+  return currentIndex < allMonthKeys.value.length - 1
 })
 
 // 配置常量
-const STANDARD_WORK_DAYS = 22
 const STANDARD_DAILY_HOURS = 9
-const CIRCUMFERENCE = 264 // 圆环周长 (2 * π * 42)
 
 // 动画控制状态
 const isMounted = ref(false)
@@ -282,15 +301,8 @@ const monthData = computed(() => {
   const monthStats = personalData.value.stats?.[currentMonth.value] || {}
   const avgDaily = currentUser.value.monthlyHours?.[currentMonth.value] || 0
   // API返回的total_work_hours已经是总工时，不需要再乘以天数
-  const totalHours = monthStats.totalHours || (avgDaily * STANDARD_WORK_DAYS)
-  const standardTotalHours = STANDARD_WORK_DAYS * STANDARD_DAILY_HOURS
-
-  // 达成率百分比
-  const percent = Math.min(100, (totalHours / standardTotalHours) * 100)
-
-  // 动画逻辑：未挂载时 offset 为周长（即空），挂载后计算实际 offset
-  const targetOffset = CIRCUMFERENCE - (percent / 100) * CIRCUMFERENCE
-  const strokeDashoffset = isMounted.value ? targetOffset : CIRCUMFERENCE
+  const totalHours = monthStats.totalHours 
+  const standardTotalHours = STANDARD_DAILY_HOURS * monthStats.workDays
 
   // 日均工时进度
   const dailyPercent = Math.min(100, (avgDaily / 12) * 100)
@@ -303,15 +315,17 @@ const monthData = computed(() => {
   const animatedTotalPercent = isMounted.value ? totalPercent : 0
   const standardTotalPercent = (standardTotalHours / maxTotalHours) * 100
 
+  // 计算加班时长（总工时 - 标准工时，如果为负则显示0）
+  const overtimeHours = Math.max(0, totalHours - standardTotalHours)
+
   return {
     avgDaily: avgDaily.toFixed(2),
-    totalHours: totalHours.toFixed(2),
-    standardDays: STANDARD_WORK_DAYS,
+    totalHours: totalHours,
+    overtimeHours: overtimeHours.toFixed(1), // 加班时长，保留一位小数
+    standardDays: monthStats.workDays,
     standardTotalHours: standardTotalHours,
     maxTotalHours: maxTotalHours,
     stats: currentUser.value.stats || {},
-    percent,
-    strokeDashoffset,
     animatedDailyPercent,
     standardDailyPercent,
     animatedTotalPercent,
@@ -331,16 +345,29 @@ const visibleMonthCount = computed(() => {
   return Math.max(1, Math.min(12, count))
 })
 
+// 生成当前年份的所有12个月
+const generateYearMonths = (year) => {
+  const months = []
+  for (let month = 1; month <= 12; month++) {
+    const monthStr = month.toString().padStart(2, '0')
+    months.push(`${year}-${monthStr}`)
+  }
+  return months
+}
+
 // 月份趋势数据（根据容器宽度动态显示）
 const monthlyTrend = computed(() => {
-  // 只获取当前年份的月份
-  const yearMonths = currentYearMonths.value
+  // 生成当前年份的所有12个月
+  const allYearMonths = generateYearMonths(currentYear.value)
+  // 获取有数据的月份集合
+  const yearMonthsWithData = new Set(currentYearMonths.value)
   const count = visibleMonthCount.value
 
-  // 如果显示的月份数量等于或大于当前年份的月份数量，直接返回所有月份
-  if (count >= yearMonths.length) {
-    return yearMonths.map(month => {
-      const hours = currentUser.value.monthlyHours?.[month] || 0
+  // 如果显示的月份数量等于或大于12，直接返回所有月份
+  if (count >= 12) {
+    return allYearMonths.map(month => {
+      const hasData = yearMonthsWithData.has(month)
+      const hours = hasData ? (currentUser.value.monthlyHours?.[month] || 0) : 0
       const monthNum = parseInt(month.split('-')[1])
       const labels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
 
@@ -348,31 +375,33 @@ const monthlyTrend = computed(() => {
         month,
         label: labels[monthNum - 1],
         hours,
+        hasData,
         isCurrent: month === currentMonth.value
       }
     })
   }
 
   // 需要均匀分布：找到当前月份在数组中的位置
-  const currentIndex = yearMonths.findIndex(m => m === currentMonth.value)
-  const currentPos = currentIndex >= 0 ? currentIndex : yearMonths.length - 1
+  const currentIndex = allYearMonths.findIndex(m => m === currentMonth.value)
+  const currentPos = currentIndex >= 0 ? currentIndex : allYearMonths.length - 1
 
   // 计算起始索引，使当前月份尽量居中
   let startIndex = Math.max(0, Math.min(
     currentPos - Math.floor(count / 2),
-    yearMonths.length - count
+    allYearMonths.length - count
   ))
 
   // 如果当前月份在最后几个，从末尾开始显示
-  if (currentPos >= yearMonths.length - Math.ceil(count / 2)) {
-    startIndex = yearMonths.length - count
+  if (currentPos >= allYearMonths.length - Math.ceil(count / 2)) {
+    startIndex = allYearMonths.length - count
   }
 
   // 获取要显示的月份
-  const visibleMonths = yearMonths.slice(startIndex, startIndex + count)
+  const visibleMonths = allYearMonths.slice(startIndex, startIndex + count)
 
   return visibleMonths.map(month => {
-    const hours = currentUser.value.monthlyHours?.[month] || 0
+    const hasData = yearMonthsWithData.has(month)
+    const hours = hasData ? (currentUser.value.monthlyHours?.[month] || 0) : 0
     const monthNum = parseInt(month.split('-')[1])
     const labels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
 
@@ -380,6 +409,7 @@ const monthlyTrend = computed(() => {
       month,
       label: labels[monthNum - 1],
       hours,
+      hasData,
       isCurrent: month === currentMonth.value
     }
   })
@@ -407,6 +437,14 @@ const getColorClass = (color) => {
 
 // ResizeObserver 实例
 let resizeObserver = null
+
+// 监听 allMonthKeys 变化，初始化 currentMonth
+watch(allMonthKeys, (newKeys) => {
+  if (newKeys.length > 0 && !currentMonth.value) {
+    // 如果 currentMonth 为空，设置为最后一个月份
+    currentMonth.value = newKeys[newKeys.length - 1]
+  }
+}, { immediate: true })
 
 // 监听年份变化，如果切换到新年份且数据未加载，则获取数据
 watch(currentYear, async (newYear, oldYear) => {
@@ -498,7 +536,7 @@ onUnmounted(() => {
           <h2 class="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
             工时看板
           </h2>
-          <p class="text-[13px] text-gray-500 mt-1 font-medium">实时追踪您的工时投入与考勤状况</p>
+          <p class="text-[13px] text-gray-500 mt-1 font-medium">追踪您的月度工时与考勤状况</p>
         </div>
 
         <div class="flex items-center gap-2 z-20">
@@ -531,24 +569,39 @@ onUnmounted(() => {
           </button>
 
           <div class="flex items-center gap-1 py-1 px-1 flex-1" :style="{ gap: `${MONTH_ITEM_GAP}px` }">
-            <button v-for="item in monthlyTrend" :key="item.month" @click="currentMonth = item.month"
+            <button v-for="item in monthlyTrend" :key="item.month" 
+              @click="item.hasData && (currentMonth = item.month)"
+              :disabled="!item.hasData"
               class="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden"
               :style="monthItemStyle"
-              :class="item.isCurrent
-                ? 'bg-transparent shadow-lg shadow-blue-200/50 text-blue-700 ring-2 ring-blue-400/50 border border-blue-300/30 scale-105'
-                : 'bg-transparent hover:bg-blue-50/60 hover:shadow-md hover:shadow-blue-200/30 hover:ring-1 hover:ring-blue-300/40 hover:scale-105 text-gray-600 hover:text-blue-600'">
+              :class="[
+                item.isCurrent && item.hasData
+                  ? 'bg-transparent shadow-lg shadow-blue-200/50 text-blue-700 ring-2 ring-blue-400/50 border border-blue-300/30 scale-105'
+                  : item.hasData
+                    ? 'bg-transparent hover:bg-blue-50/60 hover:shadow-md hover:shadow-blue-200/30 hover:ring-1 hover:ring-blue-300/40 hover: text-gray-600 hover:text-blue-600 cursor-pointer'
+                    : 'bg-transparent text-gray-400 opacity-50 cursor-not-allowed',
+                !item.hasData && 'pointer-events-none'
+              ]">
               <!-- <div v-if="item.isCurrent"
               class="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-1.5 bg-blue-500 rounded-t-full shadow-sm"></div> -->
               <span class="text-xs font-bold transition-colors duration-300"
-                :class="item.isCurrent ? 'text-blue-700' : 'group-hover:text-blue-600'">{{ item.label }}</span>
+                :class="[
+                  item.isCurrent && item.hasData ? 'text-blue-700' : '',
+                  item.hasData && !item.isCurrent ? 'group-hover:text-blue-600' : '',
+                  !item.hasData ? 'text-gray-400' : ''
+                ]">{{ item.label }}</span>
               <div class="h-8 w-1.5 bg-gray-200 rounded-full flex items-end overflow-hidden shadow-inner">
-                <div class="w-full rounded-full transition-all duration-500"
+                <div v-if="item.hasData" class="w-full rounded-full transition-all duration-500"
                   :class="item.isCurrent ? 'bg-gradient-to-t from-blue-600 to-blue-400 shadow-sm' : 'bg-gradient-to-t from-blue-400 to-blue-300 group-hover:from-blue-500 group-hover:to-blue-400'"
                   :style="{ height: Math.min(100, (item.hours / 12) * 100) + '%' }"></div>
               </div>
               <span class="text-[10px] font-mono transition-colors duration-300"
-                :class="item.isCurrent ? 'text-blue-600 opacity-90' : 'opacity-70 group-hover:text-blue-500 group-hover:opacity-90'">{{
-                  item.hours.toFixed(1) }}</span>
+                :class="[
+                  item.isCurrent && item.hasData ? 'text-blue-600 opacity-90' : '',
+                  item.hasData && !item.isCurrent ? 'opacity-70 group-hover:text-blue-500 group-hover:opacity-90' : '',
+                  !item.hasData ? 'text-gray-400 opacity-50' : ''
+                ]">{{
+                  item.hasData ? item.hours.toFixed(1) : '-' }}</span>
             </button>
           </div>
 
@@ -563,7 +616,7 @@ onUnmounted(() => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10 animate-enter font-sans" style="--stagger: 1">
 
         <div
-          class="group relative overflow-hidden rounded-[32px] bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 flex flex-col justify-between transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:border-gray-200">
+          class="group relative overflow-hidden rounded-[32px] bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 flex flex-col justify-between transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)]  hover:border-gray-200">
           <div
             class="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-blue-50/50 to-indigo-50/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none -ml-16 -mb-16">
           </div>
@@ -574,21 +627,33 @@ onUnmounted(() => {
                 class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 shadow-sm shadow-blue-100">
                 <IconClock class="w-5 h-5" />
               </div>
-              <span class="text-[13px] font-bold text-gray-400 uppercase tracking-wider">月总时长</span>
+              <span class="text-[13px] font-bold text-gray-400 uppercase tracking-wider">月总工作时长</span>
             </div>
 
             <div class="px-3 py-1 bg-gray-50 rounded-full border border-gray-100 flex items-center gap-2">
               <div class="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-              <span class="text-xs font-semibold text-gray-500">标准 {{ monthData.standardTotalHours }} h</span>
+              <span class="text-xs font-semibold text-gray-500">{{currentMonth.split('-')[1]}} 月标准 {{ monthData.standardTotalHours }} h</span>
             </div>
           </div>
 
           <div class="mb-8 z-10">
-            <div class="flex items-baseline gap-2">
+            <div class="flex flex-row justify-between items-baseline">
+              <div class="flex flex-row items-baseline gap-2">
               <span class="text-5xl font-bold text-gray-900 tracking-tight font-sf-display">
                 {{ monthData.totalHours }}
               </span>
               <span class="text-lg text-gray-400 font-medium">h</span>
+              </div>
+              <div class="flex flex-row items-baseline gap-2 relative">
+                
+                <span class="text-[13px] font-semibold text-violet-500 uppercase tracking-wide ">加班</span>
+                
+                
+                <span class="text-5xl font-bold tracking-tight font-sf-display bg-gradient-to-br from-violet-500 to-violet-600 bg-clip-text text-transparent">
+                  {{ monthData.overtimeHours }}
+                </span>
+                <span class="text-lg font-medium bg-gradient-to-br from-violet-500 to-violet-600 bg-clip-text text-transparent">h</span>
+              </div>
             </div>
           </div>
 
@@ -621,7 +686,7 @@ onUnmounted(() => {
         </div>
 
         <div
-          class="group relative overflow-hidden rounded-[32px] bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 flex flex-col justify-between transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:border-gray-200">
+          class="group relative overflow-hidden rounded-[32px] bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-8 flex flex-col justify-between transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] hover:border-gray-200">
           <div
             class="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-emerald-50/50 to-teal-50/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none -ml-16 -mb-16">
           </div>
@@ -632,12 +697,12 @@ onUnmounted(() => {
                 class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-sm shadow-emerald-100">
                 <IconTrendUp class="w-5 h-5" />
               </div>
-              <span class="text-[13px] font-bold text-gray-400 uppercase tracking-wider">日均时长</span>
+              <span class="text-[13px] font-bold text-gray-400 uppercase tracking-wider">日均工作时长</span>
             </div>
 
             <div class="px-3 py-1 bg-gray-50 rounded-full border border-gray-100 flex items-center gap-2">
               <div class="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-              <span class="text-xs font-semibold text-gray-500">标准 {{ monthData.standardDays }} 天</span>
+              <span class="text-xs font-semibold text-gray-500">{{currentMonth.split('-')[1]}} 月标准 {{ monthData.standardDays }} 天</span>
             </div>
           </div>
 
@@ -716,7 +781,7 @@ onUnmounted(() => {
                   :class="item.value > 0 ? 'scale-100' : 'scale-95 origin-left'">
                   {{ item.value }}
                 </span>
-                <span class="text-[11px] font-medium opacity-60" v-if="item.value > 0">{{ item.unit }}</span>
+                <span class="text-[11px] font-medium opacity-60" >{{ item.unit }}</span>
               </div>
               <div class="text-[11px] font-semibold mt-1 transition-colors duration-300"
                 :class="item.value > 0 ? 'text-gray-500' : 'text-gray-400'">{{ item.label }}</div>

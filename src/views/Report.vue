@@ -9,7 +9,7 @@ import IconChart from '../components/icons/IconChart.vue'
 import IconTrendUp from '../components/icons/IconTrendUp.vue'
 import IconTrendDown from '../components/icons/IconTrendDown.vue'
 import IconClock from '../components/icons/IconClock.vue'
-import { allMonthKeys, getCellColor } from '../utils/data'
+import { getCellColor } from '../utils/data'
 import { getEmployees, getMonthList, queryReportData } from '../utils/api/modules/report'
 const showToast = inject('showToast')
 
@@ -90,8 +90,8 @@ const normalizeData = (apiData) => {
 
 // 计算选择的月份数量
 const selectedMonthCount = computed(() => {
-  const startIdx = allMonthKeys.indexOf(startMonth.value)
-  const endIdx = allMonthKeys.indexOf(endMonth.value)
+  const startIdx = monthList.value.indexOf(startMonth.value)
+  const endIdx = monthList.value.indexOf(endMonth.value)
   if (startIdx === -1 || endIdx === -1 || startIdx > endIdx) {
     return 0
   }
@@ -281,8 +281,8 @@ const footerStats = computed(() => {
 
 // 月份选择验证
 watch([startMonth, endMonth], ([start, end]) => {
-  const startIdx = allMonthKeys.indexOf(start)
-  const endIdx = allMonthKeys.indexOf(end)
+  const startIdx = monthList.value.indexOf(start)
+  const endIdx = monthList.value.indexOf(end)
   if (startIdx > endIdx) {
     endMonth.value = start
     return
@@ -290,8 +290,8 @@ watch([startMonth, endMonth], ([start, end]) => {
 
   const monthCount = endIdx - startIdx + 1
   if (monthCount < 2) {
-    const newEndIdx = Math.min(startIdx + 1, allMonthKeys.length - 1)
-    endMonth.value = allMonthKeys[newEndIdx]
+    const newEndIdx = Math.min(startIdx + 1, monthList.value.length - 1)
+    endMonth.value = monthList.value[newEndIdx]
   }
 })
 
