@@ -24,6 +24,9 @@ const workDays = ref(22)
 const SAVE_TO_DATABASE = ref(false) // 是否保存到数据库，默认false
 const OVER_WRITE = ref(false) // 是否覆盖已有数据，默认false
 
+// 是否已经生成报表，默认false
+const hasGeneratedReport = ref(false)
+
 // 已保存的配置快照（用于判断是否有未保存的更改）
 const savedConfig = ref({
   DAILY_STATS_FILE: '',
@@ -52,6 +55,11 @@ const isMonthConsistent = computed(() => {
 // 判断是否可以生成报表
 const canGenerateReport = computed(() => {
   return !hasUnsavedChanges.value && isMonthConsistent.value
+})
+
+// 判断是否可以下载报表
+const canDownloadReport = computed(() => {
+  return canGenerateReport && hasGeneratedReport.value && !isProcessing.value
 })
 
 // 获取错误提示信息
@@ -115,7 +123,7 @@ const loadFiles = async () => {
     if (monthlyFiles.value.length > 0 && !selectedMonthlyFile.value) {
       selectedMonthlyFile.value = monthlyFiles.value[0]
     }
-    
+
     // 加载完成后检查月份
     checkMonth()
   } catch (error) {
@@ -129,11 +137,11 @@ const checkMonth = () => {
     // 从文件名中提取日期部分：杭州安恒信息技术股份有限公司_每日统计_20251001-20251031.xlsx
     const dailyDatePart = selectedDailyFile.value.split('_')[2]?.replace('.xlsx', '') || ''
     const monthlyDatePart = selectedMonthlyFile.value.split('_')[2]?.replace('.xlsx', '') || ''
-    
+
     // 从日期范围中提取月份（格式：20251001-20251031，月份在第5-6位）
     const dailyMonth = dailyDatePart.substring(4, 6)
     const monthlyMonth = monthlyDatePart.substring(4, 6)
-    
+
     if (dailyMonth && monthlyMonth && dailyMonth === monthlyMonth) {
       // 去掉前导零，如 "10" 而不是 "10"，"09" 转为 "9"
       currentMonth.value = parseInt(dailyMonth, 10).toString()
@@ -146,7 +154,7 @@ const checkMonth = () => {
 
 // 保存配置函数
 const saveConfigFunction = async () => {
-  try{
+  try {
     await saveConfig({
       DAILY_STATS_FILE: selectedDailyFile.value,
       MONTHLY_SUMMARY_FILE: selectedMonthlyFile.value,
@@ -162,7 +170,7 @@ const saveConfigFunction = async () => {
       SAVE_TO_DATABASE: SAVE_TO_DATABASE.value,
       OVER_WRITE: OVER_WRITE.value
     }
-    showToast('配置保存成功') 
+    showToast('配置保存成功')
     await getCurrentConfig()
     await loadFiles()
   } catch (error) {
@@ -173,7 +181,7 @@ const saveConfigFunction = async () => {
 
 // 重置配置函数
 const resetConfigFunction = async () => {
-  try{
+  try {
     await resetConfig()
     showToast('配置重置成功')
     await getCurrentConfig()
@@ -193,7 +201,7 @@ const executeProcessExcelFunction = async () => {
   if (isProcessing.value) {
     return
   }
-  try{
+  try {
     isProcessing.value = true
     await executeProcessExcel()
     showToast('处理成功')
@@ -211,13 +219,13 @@ const executeProcessExcelFunction = async () => {
 const handleFileChange = async (event) => {
   const file = event.target.files?.[0]
   if (!file) return
-  
+
   // 验证文件类型
   if (!file.name.endsWith('.xlsx')) {
     showToast('请上传 .xlsx 格式的文件', 'error')
     return
   }
-  
+
   await uploadFileHandler(file)
 }
 
@@ -258,16 +266,16 @@ const handleDrop = async (event) => {
   event.preventDefault()
   event.stopPropagation()
   isDragging.value = false
-  
+
   const file = event.dataTransfer.files?.[0]
   if (!file) return
-  
+
   // 验证文件类型
   if (!file.name.endsWith('.xlsx')) {
     showToast('请上传 .xlsx 格式的文件', 'error')
     return
   }
-  
+
   await uploadFileHandler(file)
 }
 
@@ -297,60 +305,52 @@ onMounted(() => {
         <p class="text-[13px] text-gray-500 mt-1">管理数据源与输出参数</p>
       </div>
     </div>
-    
+
     <!-- Upload Section (macOS style well) -->
     <!-- 使用 bg-white 但带有更细腻的阴影，模仿 macOS 的分组 -->
     <div class="bg-white border border-gray-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.03)] rounded-xl overflow-hidden mb-6">
-      
+
       <div class="p-1.5">
-        <input 
-          ref="fileInputRef"
-          id="fileInput" 
-          type="file" 
-          @change="handleFileChange" 
-          class="hidden" 
-          accept=".xlsx"
-          :disabled="isUploading"
-        >
-        <div 
-          @click="handleClickUpload"
-          @dragover="handleDragOver"
-          @dragleave="handleDragLeave"
-          @drop="handleDrop"
+        <input ref="fileInputRef" id="fileInput" type="file" @change="handleFileChange" class="hidden" accept=".xlsx"
+          :disabled="isUploading">
+        <div @click="handleClickUpload" @dragover="handleDragOver" @dragleave="handleDragLeave" @drop="handleDrop"
           :class="[
             'relative w-full min-h-[140px] flex flex-col items-center justify-center rounded-lg transition-all duration-300 ease-out cursor-pointer',
-            isDragging 
-              ? 'bg-[#007AFF]/10 border-2 border-[#007AFF] shadow-inner' 
+            isDragging
+              ? 'bg-[#007AFF]/10 border-2 border-[#007AFF] shadow-inner'
               : 'bg-gray-50/50 hover:bg-gray-100/70 border border-gray-200/60 hover:border-gray-300/60',
             isUploading && 'opacity-70 pointer-events-none cursor-not-allowed'
-          ]"
-        >
+          ]">
           <!-- Content Container -->
           <div class="relative z-10 flex flex-col items-center text-center p-4">
-            
+
             <!-- Icon -->
             <div :class="[
               'mb-3 transition-transform duration-300',
               isDragging ? 'scale-110' : ''
             ]">
-               <svg v-if="isUploading" class="w-10 h-10 animate-spin text-[#007AFF]" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-               </svg>
-               <!-- macOS style cloud upload icon -->
-               <svg v-else class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-               </svg>
+              <svg v-if="isUploading" class="w-10 h-10 animate-spin text-[#007AFF]" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+              </svg>
+              <!-- macOS style cloud upload icon -->
+              <svg v-else class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                stroke-width="1.2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              </svg>
             </div>
 
             <!-- Text -->
             <div class="space-y-1">
-               <h3 class="text-[14px] font-semibold text-gray-700">
-                 {{ isUploading ? '正在导入...' : isDragging ? '松开以上传' : '拖拽或点击上传文件' }}
-               </h3>
-               <p class="text-[12px] text-gray-400 font-medium">
-                 支持 .xlsx 格式
-               </p>
+              <h3 class="text-[14px] font-semibold text-gray-700">
+                {{ isUploading ? '正在导入...' : isDragging ? '松开以上传' : '拖拽或点击上传文件' }}
+              </h3>
+              <p class="text-[12px] text-gray-400 font-medium">
+                支持 .xlsx 格式
+              </p>
             </div>
           </div>
         </div>
@@ -362,15 +362,17 @@ onMounted(() => {
       <!-- Section Header -->
       <div class="px-4 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center justify-end gap-2">
         <div class="flex items-center gap-2 px-3 ">
-          <div v-if="currentMonth" class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_6px_rgba(74,222,128,0.4)] "></div>
+          <div v-if="currentMonth" class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_6px_rgba(74,222,128,0.4)] ">
+          </div>
           <div v-else class="w-2 h-2 rounded-full bg-red-500 "></div>
-          <span v-if="currentMonth" class="text-[11px] font-medium text-gray-600">{{currentMonth}}月 · 月份一致</span>
+          <span v-if="currentMonth" class="text-[11px] font-medium text-gray-600">{{ currentMonth }}月 · 月份一致</span>
           <span v-else class="text-[11px] font-medium text-gray-600">月份不一致</span>
         </div>
       </div>
-      
+
       <!-- Item 1 -->
-      <div class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+      <div
+        class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
         <div class="flex items-center gap-3 min-w-[180px]">
           <div class="w-8 h-8 rounded-lg bg-[#007AFF] flex items-center justify-center text-white shadow-sm">
             <IconFileText class="w-4 h-4"></IconFileText>
@@ -381,7 +383,8 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex-1 w-full sm:w-auto relative">
-          <select v-model="selectedDailyFile" class="w-full appearance-none bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg pl-3 pr-8 py-1.5 border border-transparent focus:bg-white focus:border-blue-500/30 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none cursor-pointer">
+          <select v-model="selectedDailyFile"
+            class="w-full appearance-none bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg pl-3 pr-8 py-1.5 border border-transparent focus:bg-white focus:border-blue-500/30 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none cursor-pointer">
             <option v-for="file in dailyFiles" :key="file" :value="file">{{ file }}</option>
             <option v-if="dailyFiles.length === 0" disabled>暂无文件</option>
           </select>
@@ -392,7 +395,8 @@ onMounted(() => {
       </div>
 
       <!-- Item 2 -->
-      <div class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
+      <div
+        class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
         <div class="flex items-center gap-3 min-w-[180px]">
           <div class="w-8 h-8 rounded-lg bg-[#AF52DE] flex items-center justify-center text-white shadow-sm">
             <IconBriefcase class="w-4 h-4"></IconBriefcase>
@@ -403,7 +407,8 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex-1 w-full sm:w-auto relative">
-          <select v-model="selectedMonthlyFile" class="w-full appearance-none bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg pl-3 pr-8 py-1.5 border border-transparent focus:bg-white focus:border-purple-500/30 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none cursor-pointer">
+          <select v-model="selectedMonthlyFile"
+            class="w-full appearance-none bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg pl-3 pr-8 py-1.5 border border-transparent focus:bg-white focus:border-purple-500/30 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none cursor-pointer">
             <option v-for="file in monthlyFiles" :key="file" :value="file">{{ file }}</option>
             <option v-if="monthlyFiles.length === 0" disabled>暂无文件</option>
           </select>
@@ -430,7 +435,8 @@ onMounted(() => {
       </div> -->
 
       <!-- Item 4 -->
-      <div class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+      <div
+        class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
         <div class="flex items-center gap-3">
           <div class="w-8 h-8 rounded-lg bg-[#34C759] flex items-center justify-center text-white shadow-sm">
             <IconCalendarDays class="w-4 h-4"></IconCalendarDays>
@@ -438,37 +444,46 @@ onMounted(() => {
           <label class="text-[13px] font-medium text-gray-900">标准工作天数</label>
         </div>
         <div class="flex items-center gap-2">
-          <input type="number" v-model="workDays" class="w-20 text-right bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg px-3 py-1.5 border border-transparent focus:bg-white focus:border-green-500/30 focus:ring-2 focus:ring-green-500/20 transition-all outline-none" />
+          <input type="number" v-model="workDays"
+            class="w-20 text-right bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg px-3 py-1.5 border border-transparent focus:bg-white focus:border-green-500/30 focus:ring-2 focus:ring-green-500/20 transition-all outline-none" />
           <span class="text-[13px] text-gray-400">天</span>
         </div>
       </div>
 
       <!-- Item 5: 保存到数据库选项 -->
-      <div class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
+      <div
+        class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
         <div class="flex items-center gap-3">
           <div class="w-8 h-8 rounded-lg bg-[#5856D6] flex items-center justify-center text-white shadow-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
             </svg>
           </div>
           <label class="text-[13px] font-medium text-gray-900">保存到数据库</label>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
           <input type="checkbox" v-model="SAVE_TO_DATABASE" class="sr-only peer" />
-          <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5856D6]"></div>
+          <div
+            class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5856D6]">
+          </div>
         </label>
       </div>
       <!-- Item 6: 覆盖选项 -->
-      <div v-if="SAVE_TO_DATABASE" class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
+      <div v-if="SAVE_TO_DATABASE"
+        class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
         <div class="flex items-center gap-3">
-          <div v-if="OVER_WRITE" class="w-8 h-8 rounded-lg bg-[#FF3B30] flex items-center justify-center text-white shadow-sm">
+          <div v-if="OVER_WRITE"
+            class="w-8 h-8 rounded-lg bg-[#FF3B30] flex items-center justify-center text-white shadow-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </div>
           <div v-else class="w-8 h-8 rounded-lg bg-[#999999] flex items-center justify-center text-white shadow-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </div>
           <label v-if="OVER_WRITE" class="text-[13px] font-medium text-red-600">覆盖已有数据</label>
@@ -476,66 +491,62 @@ onMounted(() => {
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
           <input type="checkbox" v-model="OVER_WRITE" class="sr-only peer" />
-          <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#FF3B30]"></div>
+          <div
+            class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#FF3B30]">
+          </div>
         </label>
       </div>
     </div>
 
     <!-- Actions -->
     <div class="flex items-center justify-end gap-3 pt-4 ">
-      <button 
-        @click="resetConfigFunction" 
-        :disabled="isProcessing"
-        :class="[
-          'px-4 py-1.5 text-[13px] font-medium rounded-lg transition-all shadow-sm',
-          isProcessing
-            ? 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
-            : 'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 active:scale-95 active:bg-gray-100'
-        ]"
-      >
+      <button @click="resetConfigFunction" :disabled="isProcessing" :class="[
+        'px-4 py-1.5 text-[13px] font-medium rounded-lg transition-all shadow-sm',
+        isProcessing
+          ? 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
+          : 'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 active:scale-95 active:bg-gray-100'
+      ]">
         重置
       </button>
-      <button 
-        @click="saveConfigFunction" 
-        :disabled="isProcessing"
-        :class="[
-          'px-4 py-1.5 text-[13px] font-medium rounded-lg transition-all shadow-sm flex items-center gap-1.5',
-          isProcessing
-            ? 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
-            : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-900 active:scale-95 active:bg-gray-100'
-        ]"
-      >
+      <button @click="saveConfigFunction" :disabled="isProcessing" :class="[
+        'px-4 py-1.5 text-[13px] font-medium rounded-lg transition-all shadow-sm flex items-center gap-1.5',
+        isProcessing
+          ? 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
+          : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-900 active:scale-95 active:bg-gray-100'
+      ]">
         <IconSave class="w-3.5 h-3.5"></IconSave>
         保存配置
       </button>
-      
-      <div class="relative" 
-        @mouseenter="showTooltip = true" 
-        @mouseleave="showTooltip = false"
-      >
-        <button 
-          @click="executeProcessExcelFunction" 
-          :disabled="!canGenerateReport || isProcessing"
-          :class="[
-            'px-5 py-1.5 text-[13px] font-medium rounded-lg shadow-sm transition-all flex items-center gap-1.5',
-            canGenerateReport && !isProcessing
-              ? 'text-white bg-[#007AFF] hover:bg-[#0062CC] active:scale-95 active:bg-[#0051A8]' 
-              : 'text-gray-400 bg-gray-200 cursor-not-allowed'
-          ]"
-        >
+
+      <div class="relative" @mouseenter="showTooltip = true" @mouseleave="showTooltip = false">
+        <button @click="executeProcessExcelFunction" :disabled="!canGenerateReport || isProcessing" :class="[
+          'px-5 py-1.5 text-[13px] font-medium rounded-lg shadow-sm transition-all flex items-center gap-1.5',
+          canGenerateReport && !isProcessing
+            ? 'text-white bg-[#007AFF] hover:bg-[#0062CC] active:scale-95 active:bg-[#0051A8]'
+            : 'text-gray-400 bg-gray-200 cursor-not-allowed'
+        ]">
           <IconSparkles :class="['w-3.5 h-3.5', { 'animate-spin': isProcessing }]"></IconSparkles>
           {{ isProcessing ? '处理中....' : '生成报表' }}
         </button>
         <!-- Tooltip -->
         <Transition name="tooltip">
-          <div 
-            v-if="showTooltip && !canGenerateReport && !isProcessing && errorMessage"
-            class="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-[12px] rounded-lg shadow-lg whitespace-nowrap z-50 pointer-events-none"
-          >
+          <div v-if="showTooltip && !canGenerateReport && !isProcessing && errorMessage"
+            class="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-[12px] rounded-lg shadow-lg whitespace-nowrap z-50 pointer-events-none">
             {{ errorMessage }}
-            <div class="absolute top-full right-6 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-gray-900"></div>
+            <div
+              class="absolute top-full right-6 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-gray-900">
+            </div>
           </div>
         </Transition>
+      </div>
+      <div class="relative" @mouseenter="showTooltip = true" @mouseleave="showTooltip = false">
+        <button @click="downloadReport" v-if="canDownloadReport" :class="[
+          'px-4 py-1.5 text-[13px] font-medium rounded-lg transition-all shadow-sm flex items-center gap-1.5',
+          'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 active:scale-95 active:bg-gray-100'
+        ]">
+          <IconDownload class="w-3.5 h-3.5"></IconDownload>
+          下载报表
+        </button>
       </div>
     </div>
   </div>
