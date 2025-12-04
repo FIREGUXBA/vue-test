@@ -14,6 +14,18 @@ import { getCellColor } from '../utils/data'
 import { getEmployees, getMonthList, queryReportData } from '../utils/api/modules/report'
 const showToast = inject('showToast')
 
+// 部门映射函数
+const mapDepartment = (dept) => {
+  const departmentMap = {
+    'tgfw_test': 'TGFW测试',
+    'waf_test': 'WAF测试',
+    'usm_test': 'USM测试',
+    'trainee_test': '测试实习',
+    'other': '其他',
+  }
+  return departmentMap[dept] || dept
+}
+
 // 数据状态
 const data = ref([])
 const loading = ref(false)
@@ -54,7 +66,7 @@ const normalizeData = (apiData) => {
       employeeMap[employeeId] = {
         id: item.id || employeeId,
         name: employee.name || '',
-        dept: '',
+        dept: mapDepartment(employee.third_level_dept || ''),
         monthlyHours: {},
         monthlyTotalHours: {},
         stats: {

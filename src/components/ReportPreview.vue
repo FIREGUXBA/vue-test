@@ -226,13 +226,14 @@ onMounted(() => {
 
     <!-- Table Preview -->
     <div v-else-if="tableData.length > 0" class="overflow-x-auto max-h-[600px]">
-      <table class="w-full border-collapse">
+      <table class="w-full border-collapse table-fixed">
         <thead class="bg-gray-50 sticky top-0 z-10">
           <tr>
             <th
               v-for="(header, index) in headers"
               :key="index"
-              class="px-4 py-2.5 text-left text-[12px] font-semibold text-gray-700 border-b border-gray-200 whitespace-nowrap"
+              class="px-2 pt-1 text-left text-[12px] font-semibold text-gray-700 border-b border-gray-200 break-words"
+              style="width: 80px; max-width: 80px; word-break: break-word; overflow-wrap: break-word;"
             >
               {{ header || `列 ${index + 1}` }}
             </th>
@@ -247,7 +248,8 @@ onMounted(() => {
             <td
               v-for="(cell, cellIndex) in row"
               :key="cellIndex"
-              class="px-4 py-2 text-[12px] text-gray-700 whitespace-nowrap"
+              class="px-2 py-2 text-[12px] text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis"
+              :class="{'sticky': cellIndex == 0 }"
             >
               {{ cell }}
             </td>
@@ -255,7 +257,7 @@ onMounted(() => {
             <td
               v-for="n in Math.max(0, headers.length - row.length)"
               :key="`empty-${n}`"
-              class="px-4 py-2 text-[12px] text-gray-400"
+              class="px-4 py-2 text-[12px] text-gray-400 whitespace-nowrap overflow-hidden text-ellipsis"
             >
               —
             </td>
