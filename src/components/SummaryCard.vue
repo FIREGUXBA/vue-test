@@ -118,7 +118,7 @@ const listData = computed(() => {
 
 <template>
   <div 
-    class="relative flex flex-col p-4 rounded-[24px] bg-white/75 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all duration-500 hover:shadow-[0_12px_32px_rgba(0,0,0,0.06)] group overflow-hidden h-full"
+    class="relative flex flex-col p-4 rounded-xl bg-white/80 border border-gray-200 shadow-sm transition-all duration-300 hover:shadow-md group overflow-hidden h-full"
   >
     <div class="flex items-center gap-3 mb-2 relative z-10 pl-1">
       <div :class="['w-8 h-8 rounded-[10px] flex items-center justify-center shadow-sm text-white shadow-black/5', theme.bg]">

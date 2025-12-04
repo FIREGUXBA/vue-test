@@ -113,6 +113,10 @@ const fileInputRef = ref(null)
 const showDailyDropdown = ref(false)
 const showMonthlyDropdown = ref(false)
 
+// 删除确认弹窗状态
+const showDeleteConfirm = ref(false)
+const deleteFileInfo = ref({ filename: '', fileType: '' })
+
 //获取当前配置
 const getCurrentConfig = async () => {
   try {
@@ -179,8 +183,17 @@ const handleClickOutside = (event) => {
   }
 }
 
-// 删除文件
-const handleDeleteFile = async (filename, fileType) => {
+// 显示删除确认弹窗
+const showDeleteConfirmDialog = (filename, fileType) => {
+  deleteFileInfo.value = { filename, fileType }
+  showDeleteConfirm.value = true
+}
+
+// 确认删除文件
+const confirmDeleteFile = async () => {
+  const { filename, fileType } = deleteFileInfo.value
+  showDeleteConfirm.value = false
+  
   // 如果删除的是当前选中的文件，先清空选中
   if (fileType === 'daily' && selectedDailyFile.value === filename) {
     selectedDailyFile.value = ''
@@ -211,6 +224,12 @@ const handleDeleteFile = async (filename, fileType) => {
       selectedMonthlyFile.value = filename
     }
   }
+}
+
+// 取消删除
+const cancelDelete = () => {
+  showDeleteConfirm.value = false
+  deleteFileInfo.value = { filename: '', fileType: '' }
 }
 //检查月份是否一致并设置当前月份
 const checkMonth = () => {
@@ -521,7 +540,7 @@ onUnmounted(() => {
                     @click.stop="selectedDailyFile = file; showDailyDropdown = false">
                     <span class="flex-1 text-sm text-gray-700 group-hover/item:text-blue-700 transition-colors duration-200 truncate">{{
                       file }}</span>
-                    <button @click.stop="handleDeleteFile(file, 'daily')"
+                    <button @click.stop="showDeleteConfirmDialog(file, 'daily')"
                       class="opacity-0 group-hover/item:opacity-100 p-1 rounded hover:bg-red-100 transition-all duration-200 flex-shrink-0"
                       title="删除文件">
                       <IconTrash class="w-4 h-4 text-red-500 hover:text-red-600"></IconTrash>
@@ -570,7 +589,7 @@ onUnmounted(() => {
                     @click.stop="selectedMonthlyFile = file; showMonthlyDropdown = false">
                     <span class="flex-1 text-sm text-gray-700 group-hover/item:text-purple-700 transition-colors duration-200 truncate">{{
                       file }}</span>
-                    <button @click.stop="handleDeleteFile(file, 'monthly')"
+                    <button @click.stop="showDeleteConfirmDialog(file, 'monthly')"
                       class="opacity-0 group-hover/item:opacity-100 p-1 rounded hover:bg-red-100 transition-all duration-200 flex-shrink-0"
                       title="删除文件">
                       <IconTrash class="w-4 h-4 text-red-500 hover:text-red-600"></IconTrash>
@@ -740,6 +759,39 @@ onUnmounted(() => {
 
     <!-- Report Preview Component -->
     <ReportPreview :file-url="latestReportFileUrl" />
+
+    <!-- 删除确认弹窗 -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showDeleteConfirm" 
+          class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          @click.self="cancelDelete">
+          <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 transform transition-all">
+            <div class="flex items-start gap-4 mb-4">
+              <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <IconTrash class="w-5 h-5 text-red-600"></IconTrash>
+              </div>
+              <div class="flex-1">
+                <h3 class="text-lg font-semibold text-gray-900 mb-1">确认删除</h3>
+                <p class="text-sm text-gray-600">
+                  确定要删除文件 <span class="font-medium text-gray-900">{{ deleteFileInfo.filename }}</span> 吗？此操作无法撤销。
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center justify-end gap-3">
+              <button @click="cancelDelete"
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                取消
+              </button>
+              <button @click="confirmDeleteFile"
+                class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors">
+                确认删除
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -759,5 +811,25 @@ onUnmounted(() => {
   transform: translateY(4px);
   scale: 0.95;
   transform-origin: right top;
+}
+
+/* Modal 动画 */
+.modal-enter-active {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-leave-active {
+  transition: all 0.15s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from > div,
+.modal-leave-to > div {
+  transform: scale(0.95) translateY(-10px);
+  opacity: 0;
 }
 </style>
