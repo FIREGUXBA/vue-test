@@ -70,18 +70,19 @@ const normalizeData = (apiData) => {
 
     // 直接使用 period 作为月份键
     const monthKey = item.period
-    employeeMap[employeeId].monthlyHours[monthKey] = item.avg_work_hours || 0
-    employeeMap[employeeId].monthlyTotalHours[monthKey] = item.total_work_hours || 0
+    employeeMap[employeeId].monthlyHours[monthKey] = parseFloat((item.avg_work_hours_no_weekend_exclude_card_fix || 0).toFixed(2))
+    employeeMap[employeeId].monthlyTotalHours[monthKey] = parseFloat((item.total_work_hours_with_weekend_exclude_card_fix || 0).toFixed(2))
     // 累计统计数据（补卡、迟到等应该累计）
     const stats = employeeMap[employeeId].stats
-    stats.missingCard += item.card_fix_count || 0
-    stats.businessTrip += item.business_trip_days || 0
-    stats.leave += item.leave_days_total || 0
-    stats.late += item.late_count || 0
-    stats.earlyLeave += item.early_leave_count || 0
+    stats.missingCard = parseFloat((stats.missingCard + (item.card_fix_count || 0)).toFixed(2))
+    stats.businessTrip = parseFloat((stats.businessTrip + (item.business_trip_days || 0)).toFixed(2))
+    stats.compLeave = parseFloat((stats.compLeave + (item.compensatory_leave_days || 0)).toFixed(2))
+    stats.leave = parseFloat((stats.leave + (item.leave_days || 0)).toFixed(2))
+    stats.late = parseFloat((stats.late + (item.late_count || 0)).toFixed(2))
+    stats.earlyLeave = parseFloat((stats.earlyLeave + (item.early_leave_count || 0)).toFixed(2))
 
     // 累计总工时（使用总工时）
-    employeeMap[employeeId].hours += item.total_work_hours || 0
+    employeeMap[employeeId].hours = parseFloat((employeeMap[employeeId].hours + (item.total_work_hours_with_weekend_exclude_card_fix || 0)).toFixed(2))
   })
 
   // 转换为数组并返回
@@ -577,7 +578,7 @@ onUnmounted(() => {
           <thead>
             <tr>
               <th
-                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 w-28 text-left sticky left-0 shadow-[4px_0_12px_rgba(0,0,0,0.02)] z-20">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/80 backdrop-blur-sm border-b border-gray-200 w-28 text-left sticky left-0 shadow-[4px_0_12px_rgba(0,0,0,0.02)] z-20">
                 姓名</th>
               <th
                 class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 w-32 text-left">
@@ -609,7 +610,7 @@ onUnmounted(() => {
           <tbody class="relative">
             <tr v-for="row in data" :key="row.id" class="group hover:bg-gray-50/50 transition-colors duration-150">
               <td
-                class="px-4 py-3 text-[13px] text-gray-900 border-b border-gray-100 whitespace-nowrap font-medium sticky left-0 bg-white/80 group-hover:bg-gray-50/50 border-r border-gray-200 z-10">
+                class="px-4 py-3 text-[13px] text-gray-900 border-b border-r border-gray-100 whitespace-nowrap font-medium sticky left-0 bg-white group-hover:bg-gray-50 border-r border-gray-200 z-10">
                 {{ row.name }}</td>
               <td class="px-4 py-3 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap">
                 <span class="px-2 py-0.5 rounded bg-gray-100 text-[11px] border border-gray-200">{{ row.dept }}</span>

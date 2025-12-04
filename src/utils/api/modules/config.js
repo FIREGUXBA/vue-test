@@ -68,6 +68,15 @@ export const uploadFiles = (files) => {
 }
 
 /**
+ * 删除文件
+ * @param {string} filename - 文件名称
+ * @returns {Promise}
+ */
+export const deleteFile = (filename) => {
+  return del('/config/files/' + filename)
+}
+
+/**
  * 下载报表文件
  * @param {string} fileUrl - 文件下载URL（完整路径，如：/api/config/download/outputs/团队8月考勤统计.xlsx）
  * @param {string} filename - 文件名

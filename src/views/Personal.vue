@@ -50,17 +50,17 @@ const transformApiData = (apiDataArray) => {
     const month = item.period // 格式: "2025-08"
 
     // 存储日均工时
-    result.monthlyHours[month] = item.avg_work_hours || 0
+    result.monthlyHours[month] = item.avg_work_hours_no_weekend_exclude_card_fix || 0
 
     // 存储该月的统计数据
     result.stats[month] = {
       missingCard: item.card_fix_count || 0,
       businessTrip: item.business_trip_days || 0,
-      compLeave: 0, // API中没有调休字段，设为0
-      leave: item.leave_days_total || 0,
+      compLeave: item.compensatory_leave_days || 0,
+      leave: item.leave_days || 0,
       late: item.late_count || 0,
-      totalHours: item.total_work_hours || 0,
-      workDays: item.work_days || 0
+      totalHours: item.total_work_hours_with_weekend_exclude_card_fix || 0,
+      workDays: item.standard_work_days || 0
     }
 
     // 保存员工信息（取第一条）

@@ -1,13 +1,16 @@
 <script setup>
-import { ref, onMounted, watch, inject, computed } from 'vue'
+import { ref, onMounted, onUnmounted, watch, inject, computed } from 'vue'
 import IconFileText from '../components/icons/IconFileText.vue'
 import IconBriefcase from '../components/icons/IconBriefcase.vue'
 import IconSave from '../components/icons/IconSave.vue'
 import IconCalendarDays from '../components/icons/IconCalendarDays.vue'
 import IconChevronDown from '../components/icons/IconChevronDown.vue'
+import IconChevronRight from '../components/icons/IconChevronRight.vue'
 import IconSparkles from '../components/icons/IconSparkles.vue'
 import IconDownload from '../components/icons/IconDownload.vue'
-import { getConfigFiles, saveConfig, getConfig, resetConfig, executeProcessExcel, uploadFiles, downloadReportFile } from '../utils/api/modules/config'
+import IconTrash from '../components/icons/IconTrash.vue'
+import ReportPreview from '../components/ReportPreview.vue'
+import { getConfigFiles, saveConfig, getConfig, resetConfig, executeProcessExcel, uploadFiles, downloadReportFile, deleteFile } from '../utils/api/modules/config'
 const showToast = inject('showToast')
 //当前选中的月份
 const currentMonth = ref('')
@@ -106,6 +109,10 @@ const isDragging = ref(false)
 const isUploading = ref(false)
 const fileInputRef = ref(null)
 
+// 下拉框显示状态
+const showDailyDropdown = ref(false)
+const showMonthlyDropdown = ref(false)
+
 //获取当前配置
 const getCurrentConfig = async () => {
   try {
@@ -151,7 +158,60 @@ const loadFiles = async () => {
     console.error('加载文件列表失败:', error)
   }
 }
+// 切换下拉框显示状态
+const toggleDailyDropdown = () => {
+  const wasOpen = showDailyDropdown.value
+  showMonthlyDropdown.value = false
+  showDailyDropdown.value = !wasOpen
+}
 
+const toggleMonthlyDropdown = () => {
+  const wasOpen = showMonthlyDropdown.value
+  showDailyDropdown.value = false
+  showMonthlyDropdown.value = !wasOpen
+}
+
+// 点击外部关闭下拉框
+const handleClickOutside = (event) => {
+  if (!event.target.closest('.dropdown-container')) {
+    showDailyDropdown.value = false
+    showMonthlyDropdown.value = false
+  }
+}
+
+// 删除文件
+const handleDeleteFile = async (filename, fileType) => {
+  // 如果删除的是当前选中的文件，先清空选中
+  if (fileType === 'daily' && selectedDailyFile.value === filename) {
+    selectedDailyFile.value = ''
+  } else if (fileType === 'monthly' && selectedMonthlyFile.value === filename) {
+    selectedMonthlyFile.value = ''
+  }
+
+  try {
+    await deleteFile(filename)
+    showToast('文件删除成功')
+    // 重新加载文件列表
+    await loadFiles()
+    // 如果删除后列表不为空，自动选择第一个文件
+    if (fileType === 'daily' && dailyFiles.value.length > 0 && !selectedDailyFile.value) {
+      selectedDailyFile.value = dailyFiles.value[0]
+    } else if (fileType === 'monthly' && monthlyFiles.value.length > 0 && !selectedMonthlyFile.value) {
+      selectedMonthlyFile.value = monthlyFiles.value[0]
+    }
+    // 重新检查月份
+    checkMonth()
+  } catch (error) {
+    console.error('删除文件失败:', error)
+    showToast('删除文件失败，请重试', 'error')
+    // 恢复选中状态
+    if (fileType === 'daily') {
+      selectedDailyFile.value = filename
+    } else if (fileType === 'monthly') {
+      selectedMonthlyFile.value = filename
+    }
+  }
+}
 //检查月份是否一致并设置当前月份
 const checkMonth = () => {
   if (selectedDailyFile.value && selectedMonthlyFile.value) {
@@ -283,7 +343,9 @@ const handleFileChange = async (event) => {
 const uploadFileHandler = async (files) => {
   try {
     isUploading.value = true
-    await uploadFiles(files)
+    // 确保 files 是数组格式
+    const filesArray = Array.isArray(files) ? files : [files]
+    await uploadFiles(filesArray)
     showToast('文件上传成功')
     // 重新加载文件列表
     await loadFiles()
@@ -341,6 +403,12 @@ watch([selectedDailyFile, selectedMonthlyFile], () => {
 onMounted(() => {
   getCurrentConfig()
   loadFiles()
+  document.addEventListener('click', handleClickOutside)
+})
+
+// 组件卸载时移除事件监听
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
@@ -405,7 +473,7 @@ onMounted(() => {
     </div>
 
     <!-- Group 1: Data Sources Selection 数据源选择区域-->
-    <div class="bg-white/80 border border-gray-200 shadow-sm rounded-xl overflow-hidden mb-6">
+    <div class="bg-white/80 border border-gray-200 shadow-sm rounded-xl mb-6">
       <!-- Section Header -->
       <div class="px-4 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center justify-end gap-2">
         <div class="flex items-center gap-2 px-3 ">
@@ -429,15 +497,40 @@ onMounted(() => {
             <span class="text-[11px] text-gray-500">Excel 源数据</span>
           </div>
         </div>
-        <div class="flex-1 w-full sm:w-auto relative">
-          <select v-model="selectedDailyFile"
-            class="w-full appearance-none bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg pl-3 pr-8 py-1.5 border border-transparent focus:bg-white focus:border-blue-500/30 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none cursor-pointer">
-            <option v-for="file in dailyFiles" :key="file" :value="file">{{ file }}</option>
-            <option v-if="dailyFiles.length === 0" disabled>暂无文件</option>
-          </select>
-          <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-gray-400">
-            <IconChevronDown class="w-3.5 h-3.5"></IconChevronDown>
-          </div>
+        <div class="flex-1 w-full sm:w-auto relative dropdown-container min-w-0">
+          <button @click.stop="toggleDailyDropdown()"
+            class="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-300 border relative overflow-hidden group min-w-0"
+            :class="showDailyDropdown || selectedDailyFile
+              ? 'bg-blue-50 hover:bg-blue-50 text-blue-700 border-blue-300 shadow-sm'
+              : 'bg-gray-200/50 hover:bg-gray-200 text-gray-700 border-transparent hover:border-blue-500/30 hover:shadow-sm'">
+            <span class="flex-1 text-left truncate min-w-0">{{ selectedDailyFile || '请选择文件' }}</span>
+            <IconChevronRight class="w-3 h-3 transition-all duration-300 ml-2 flex-shrink-0"
+              :class="showDailyDropdown ? 'rotate-90 text-blue-600' : 'text-gray-400'"></IconChevronRight>
+          </button>
+          <transition name="dropdown">
+            <div v-if="showDailyDropdown" @click.stop
+              class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-gray-200 shadow-lg z-[100] max-h-80 overflow-y-auto custom-scrollbar">
+              <div class="p-2">
+                <div v-if="dailyFiles.length === 0" class="p-4 text-center text-xs text-gray-400">
+                  暂无文件
+                </div>
+                <div v-else class="space-y-1">
+                  <div v-for="file in dailyFiles" :key="file"
+                    class="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50/50 cursor-pointer transition-all duration-200 group/item"
+                    :class="selectedDailyFile === file ? 'bg-blue-50' : ''"
+                    @click.stop="selectedDailyFile = file; showDailyDropdown = false">
+                    <span class="flex-1 text-sm text-gray-700 group-hover/item:text-blue-700 transition-colors duration-200 truncate">{{
+                      file }}</span>
+                    <button @click.stop="handleDeleteFile(file, 'daily')"
+                      class="opacity-0 group-hover/item:opacity-100 p-1 rounded hover:bg-red-100 transition-all duration-200 flex-shrink-0"
+                      title="删除文件">
+                      <IconTrash class="w-4 h-4 text-red-500 hover:text-red-600"></IconTrash>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </transition>
         </div>
       </div>
 
@@ -453,17 +546,59 @@ onMounted(() => {
             <span class="text-[11px] text-gray-500">含补卡次数</span>
           </div>
         </div>
-        <div class="flex-1 w-full sm:w-auto relative">
-          <select v-model="selectedMonthlyFile"
-            class="w-full appearance-none bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg pl-3 pr-8 py-1.5 border border-transparent focus:bg-white focus:border-purple-500/30 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none cursor-pointer">
-            <option v-for="file in monthlyFiles" :key="file" :value="file">{{ file }}</option>
-            <option v-if="monthlyFiles.length === 0" disabled>暂无文件</option>
-          </select>
-          <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-gray-400">
-            <IconChevronDown class="w-3.5 h-3.5"></IconChevronDown>
-          </div>
+        <div class="flex-1 w-full sm:w-auto relative dropdown-container min-w-0">
+          <button @click.stop="toggleMonthlyDropdown()"
+            class="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-300 border relative overflow-hidden group min-w-0"
+            :class="showMonthlyDropdown || selectedMonthlyFile
+              ? 'bg-purple-50 hover:bg-purple-50 text-purple-700 border-purple-300 shadow-sm'
+              : 'bg-gray-200/50 hover:bg-gray-200 text-gray-700 border-transparent hover:border-purple-500/30 hover:shadow-sm'">
+            <span class="flex-1 text-left truncate min-w-0">{{ selectedMonthlyFile || '请选择文件' }}</span>
+            <IconChevronRight class="w-3 h-3 transition-all duration-300 ml-2 flex-shrink-0"
+              :class="showMonthlyDropdown ? 'rotate-90 text-purple-600' : 'text-gray-400'"></IconChevronRight>
+          </button>
+          <transition name="dropdown">
+            <div v-if="showMonthlyDropdown" @click.stop
+              class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-gray-200 shadow-lg z-[100] max-h-80 overflow-y-auto custom-scrollbar">
+              <div class="p-2">
+                <div v-if="monthlyFiles.length === 0" class="p-4 text-center text-xs text-gray-400">
+                  暂无文件
+                </div>
+                <div v-else class="space-y-1">
+                  <div v-for="file in monthlyFiles" :key="file"
+                    class="flex items-center gap-2 p-2 rounded-lg hover:bg-purple-50/50 cursor-pointer transition-all duration-200 group/item"
+                    :class="selectedMonthlyFile === file ? 'bg-purple-50' : ''"
+                    @click.stop="selectedMonthlyFile = file; showMonthlyDropdown = false">
+                    <span class="flex-1 text-sm text-gray-700 group-hover/item:text-purple-700 transition-colors duration-200 truncate">{{
+                      file }}</span>
+                    <button @click.stop="handleDeleteFile(file, 'monthly')"
+                      class="opacity-0 group-hover/item:opacity-100 p-1 rounded hover:bg-red-100 transition-all duration-200 flex-shrink-0"
+                      title="删除文件">
+                      <IconTrash class="w-4 h-4 text-red-500 hover:text-red-600"></IconTrash>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </transition>
         </div>
       </div>
+      
+      <!-- Item 4 -->
+      <div
+        class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-[#34C759] flex items-center justify-center text-white shadow-sm">
+            <IconCalendarDays class="w-4 h-4"></IconCalendarDays>
+          </div>
+          <label class="text-[13px] font-medium text-gray-900">标准工作天数</label>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="number" v-model="workDays"
+            class="w-20 text-right bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg px-3 py-1.5 border border-transparent focus:bg-white focus:border-green-500/30 focus:ring-2 focus:ring-green-500/20 transition-all outline-none" />
+          <span class="text-[13px] text-gray-400">天</span>
+        </div>
+      </div>
+
     </div>
 
     <!-- Group 2: Output -->
@@ -480,22 +615,6 @@ onMounted(() => {
         </div>
         <input type="text" v-model="outputFile" class="w-full sm:w-64 text-right bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg px-3 py-1.5 border border-transparent focus:bg-white focus:border-orange-500/30 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none placeholder-gray-400" />
       </div> -->
-
-      <!-- Item 4 -->
-      <div
-        class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-        <div class="flex items-center gap-3">
-          <div class="w-8 h-8 rounded-lg bg-[#34C759] flex items-center justify-center text-white shadow-sm">
-            <IconCalendarDays class="w-4 h-4"></IconCalendarDays>
-          </div>
-          <label class="text-[13px] font-medium text-gray-900">标准工作天数</label>
-        </div>
-        <div class="flex items-center gap-2">
-          <input type="number" v-model="workDays"
-            class="w-20 text-right bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg px-3 py-1.5 border border-transparent focus:bg-white focus:border-green-500/30 focus:ring-2 focus:ring-green-500/20 transition-all outline-none" />
-          <span class="text-[13px] text-gray-400">天</span>
-        </div>
-      </div>
 
       <!-- Item 5: 保存到数据库选项 -->
       <div
@@ -618,6 +737,9 @@ onMounted(() => {
         </Transition>
       </div>
     </div>
+
+    <!-- Report Preview Component -->
+    <ReportPreview :file-url="latestReportFileUrl" />
   </div>
 </template>
 
