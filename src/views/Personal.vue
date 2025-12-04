@@ -7,7 +7,7 @@ import IconCalendarDays from '../components/icons/IconCalendarDays.vue'
 import IconTrendUp from '../components/icons/IconTrendUp.vue'
 import IconChevronRight from '../components/icons/IconChevronRight.vue'
 import IconFileText from '../components/icons/IconFileText.vue'
-import { queryPersonalData } from '../utils/api/modules/personal'
+import { queryPersonalData, getAvgTotalWorkHoursByMonth, getAvgWorkHoursNoWeekendByMonth } from '../utils/api/modules/personal'
 import { getUserInfo, getUserInfoField } from '../utils/user'
 
 // 注入全局数据和方法
@@ -20,6 +20,11 @@ const loading = ref(false)
 
 // 当前月份（初始化为空，等待数据加载后设置）
 const currentMonth = ref('')
+
+// 团队平均值缓存（按月份存储）
+const teamAvgHours = ref({})
+// 团队平均日均工时缓存（按月份存储）
+const teamAvgDailyHours = ref({})
 
 // 获取员工ID（从用户信息中获取）
 const getEmployeeId = () => {
@@ -185,7 +190,7 @@ const allMonthKeys = computed(() => {
 // 容器宽度和月份显示数量
 const trendContainerRef = ref(null)
 const containerWidth = ref(0)
-const MONTH_ITEM_WIDTH = 72 // 每个月份项的宽度（px）
+const MONTH_ITEM_WIDTH = 50 // 每个月份项的宽度（px）- 可调整此值来改变子组件宽度
 const MONTH_ITEM_GAP = 4 // 月份项之间的间距（px）
 const BUTTON_WIDTH = 40 // 左右按钮的总宽度（包括间距）
 
@@ -194,7 +199,9 @@ const monthItemStyle = computed(() => {
   const count = monthlyTrend.value.length
   if (count === 0) return {}
   const totalGap = (count - 1) * MONTH_ITEM_GAP
-  const itemWidth = `calc((100% - ${totalGap}px) / ${count})`
+  // 如果需要固定宽度，可以取消下面的注释，并注释掉上面的响应式宽度计算
+  const itemWidth = `${MONTH_ITEM_WIDTH}px` // 固定宽度模式
+  // const itemWidth = `calc((100% - ${totalGap}px) / ${count})` // 响应式宽度模式
   return {
     width: itemWidth,
     minWidth: `${MONTH_ITEM_WIDTH}px`
@@ -292,6 +299,44 @@ const STANDARD_DAILY_HOURS = 9
 // 动画控制状态
 const isMounted = ref(false)
 
+// 获取团队平均工作时长
+const fetchTeamAvgHours = async (period) => {
+  // 如果已经缓存了该月份的数据，直接返回
+  if (teamAvgHours.value[period] !== undefined) {
+    return teamAvgHours.value[period]
+  }
+
+  try {
+    const response = await getAvgTotalWorkHoursByMonth(period)
+    // 返回对象 {"period": "2025-07", "average_value": 217.62217391304347, "employee_count": 23}
+    const avgHours = response.average_value
+    teamAvgHours.value[period] = avgHours
+    return avgHours
+  } catch (error) {
+    console.error('获取团队平均工作时长失败:', error)
+    return 0
+  }
+}
+
+// 获取团队平均日均工作时长
+const fetchTeamAvgDailyHours = async (period) => {
+  // 如果已经缓存了该月份的数据，直接返回
+  if (teamAvgDailyHours.value[period] !== undefined) {
+    return teamAvgDailyHours.value[period]
+  }
+
+  try {
+    const response = await getAvgWorkHoursNoWeekendByMonth(period)
+    // 返回对象 {"period": "2025-07", "average_value": 9.5, "employee_count": 23}
+    const avgDailyHours = response.average_value
+    teamAvgDailyHours.value[period] = avgDailyHours
+    return avgDailyHours
+  } catch (error) {
+    console.error('获取团队平均日均工作时长失败:', error)
+    return 0
+  }
+}
+
 // 计算核心数据
 const monthData = computed(() => {
   // 从API数据中获取当前月份的数据
@@ -321,6 +366,8 @@ const monthData = computed(() => {
     overtimeHours: overtimeHours.toFixed(1), // 加班时长，保留一位小数
     standardDays: monthStats.workDays,
     standardTotalHours: standardTotalHours,
+    teamAvgTotalHours: teamAvgHours.value[currentMonth.value] , // 团队平均值，如果未加载则使用标准工时
+    teamAvgDailyHours: teamAvgDailyHours.value[currentMonth.value] , // 团队平均日均工时
     maxTotalHours: maxTotalHours,
     stats: currentUser.value.stats || {},
     animatedDailyPercent,
@@ -412,6 +459,35 @@ const monthlyTrend = computed(() => {
   })
 })
 
+// 计算当前显示的月份中的最大和最小工时值（用于放大差异）
+const maxTrendHours = computed(() => {
+  const hoursArray = monthlyTrend.value
+    .filter(item => item.hasData)
+    .map(item => item.hours)
+  if (hoursArray.length === 0) return { max: 12, min: 0 }
+  const max = Math.max(...hoursArray)
+  const min = Math.min(...hoursArray)
+  // 确保最大值至少为12，避免除以0或过小的数
+  return {
+    max: Math.max(12, max),
+    min: min
+  }
+})
+
+// 计算柱状图高度的辅助函数（使用立方根放大差异）
+const calculateBarHeight = (hours) => {
+  if (hours <= 0) return 0
+  const { max, min } = maxTrendHours.value
+  const range = max - min
+  if (range === 0) return 100 // 如果所有值相同，显示100%
+  
+  // 归一化到0-1范围
+  const normalized = (hours - min) / range
+  // 使用立方根（指数0.3）放大差异，并添加最小高度50%
+  const height = Math.pow(normalized, 0.3) * 55 + 50 // 50%最小高度，55%动态范围
+  return Math.min(100, Math.max(50, height))
+}
+
 // 考勤异常统计
 const abnormalStats = computed(() => [
   { label: '补卡', value: monthData.value.stats.missingCard, unit: '次', icon: 'IconFileText', color: 'orange', desc: '忘记打卡' },
@@ -449,6 +525,18 @@ watch(currentYear, async (newYear, oldYear) => {
     await fetchPersonalData(newYear)
   }
 })
+
+// 监听月份变化，获取团队平均值
+watch(currentMonth, async (newMonth) => {
+  if (newMonth) {
+    if (!teamAvgHours.value[newMonth]) {
+      await fetchTeamAvgHours(newMonth)
+    }
+    if (!teamAvgDailyHours.value[newMonth]) {
+      await fetchTeamAvgDailyHours(newMonth)
+    }
+  }
+}, { immediate: true })
 
 // 监听 loading 状态，当数据加载完成后初始化容器宽度
 watch(loading, (newLoading) => {
@@ -557,15 +645,15 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div class=" rounded-[20px] p-1.5 mb-5 animate-enter" style="--stagger: 0.5" ref="trendContainerRef">
-        <div class="flex items-center gap-2">
+      <div class="p-1.5 mb-5 animate-enter" style="--stagger: 0.5" ref="trendContainerRef">
+        <div class="flex items-center justify-center gap-2.5">
           <button @click="changeMonth('prev')" :disabled="!canGoPrevMonth"
-            class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-2 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
+            class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-xl bg-white/80 hover:bg-blue-50/80 border border-gray-300/60 hover:border-blue-300/70 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/80 disabled:hover:shadow-sm disabled:hover:border-gray-300/60 group"
             :class="canGoPrevMonth ? 'cursor-pointer' : 'cursor-not-allowed'">
-            <IconChevronRight class="w-4 h-4 text-gray-600 rotate-180" />
+            <IconChevronRight class="w-4 h-4 text-gray-700 group-hover:text-blue-600 rotate-180 transition-colors" />
           </button>
 
-          <div class="flex items-center gap-1 py-1 px-1 flex-1" :style="{ gap: `${MONTH_ITEM_GAP}px` }">
+          <div class="flex items-center justify-center gap-1 py-1 px-1 " :style="{ gap: `${MONTH_ITEM_GAP}px` }">
             <button v-for="item in monthlyTrend" :key="item.month" 
               @click="item.hasData && (currentMonth = item.month)"
               :disabled="!item.hasData"
@@ -573,24 +661,23 @@ onUnmounted(() => {
               :style="monthItemStyle"
               :class="[
                 item.isCurrent && item.hasData
-                  ? 'bg-transparent shadow-lg shadow-blue-200/50 text-blue-700 ring-2 ring-blue-400/50 border border-blue-300/30 scale-105'
+                  ? 'bg-transparent shadow-lg shadow-blue-200/50 text-blue-700 ring-2 ring-blue-400/50 border border-blue-300/30 scale-100'
                   : item.hasData
                     ? 'bg-transparent hover:bg-blue-50/60 hover:shadow-md hover:shadow-blue-200/30 hover:ring-1 hover:ring-blue-300/40 hover: text-gray-600 hover:text-blue-600 cursor-pointer'
                     : 'bg-transparent text-gray-400 opacity-50 cursor-not-allowed',
                 !item.hasData && 'pointer-events-none'
               ]">
-              <!-- <div v-if="item.isCurrent"
-              class="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-1.5 bg-blue-500 rounded-t-full shadow-sm"></div> -->
+              
               <span class="text-xs font-bold transition-colors duration-300"
                 :class="[
                   item.isCurrent && item.hasData ? 'text-blue-700' : '',
                   item.hasData && !item.isCurrent ? 'group-hover:text-blue-600' : '',
                   !item.hasData ? 'text-gray-400' : ''
                 ]">{{ item.label }}</span>
-              <div class="h-8 w-1.5 bg-gray-200 rounded-full flex items-end overflow-hidden shadow-inner">
+              <div class="h-32 w-3 bg-gray-200 rounded-full flex items-end overflow-hidden shadow-inner">
                 <div v-if="item.hasData" class="w-full rounded-full transition-all duration-500"
                   :class="item.isCurrent ? 'bg-gradient-to-t from-blue-600 to-blue-400 shadow-sm' : 'bg-gradient-to-t from-blue-400 to-blue-300 group-hover:from-blue-500 group-hover:to-blue-400'"
-                  :style="{ height: Math.min(100, (item.hours / 12) * 100) + '%' }"></div>
+                  :style="{ height: calculateBarHeight(item.hours) + '%' }"></div>
               </div>
               <span class="text-[10px] font-mono transition-colors duration-300"
                 :class="[
@@ -598,14 +685,14 @@ onUnmounted(() => {
                   item.hasData && !item.isCurrent ? 'opacity-70 group-hover:text-blue-500 group-hover:opacity-90' : '',
                   !item.hasData ? 'text-gray-400 opacity-50' : ''
                 ]">{{
-                  item.hasData ? item.hours.toFixed(1) : '-' }}</span>
+                  item.hasData ? item.hours.toFixed(2) : '-' }}</span>
             </button>
           </div>
 
           <button @click="changeMonth('next')" :disabled="!canGoNextMonth"
-            class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-2 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
+            class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-xl bg-white/80 hover:bg-blue-50/80 border border-gray-300/60 hover:border-blue-300/70 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/80 disabled:hover:shadow-sm disabled:hover:border-gray-300/60 group"
             :class="canGoNextMonth ? 'cursor-pointer' : 'cursor-not-allowed'">
-            <IconChevronRight class="w-4 h-4 text-gray-600" />
+            <IconChevronRight class="w-4 h-4 text-gray-700 group-hover:text-blue-600 transition-colors" />
           </button>
         </div>
       </div>
@@ -629,7 +716,7 @@ onUnmounted(() => {
 
             <div class="px-3 py-1 bg-gray-50 rounded-full border border-gray-100 flex items-center gap-2">
               <div class="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-              <span class="text-xs font-semibold text-gray-500">{{currentMonth.split('-')[1]}} 月团队平均 {{ monthData.standardTotalHours }} h</span>
+              <span class="text-xs font-semibold text-gray-500">{{currentMonth.split('-')[1]}} 月团队平均 {{ Math.round(monthData.teamAvgTotalHours) }} h</span>
             </div>
           </div>
 
@@ -660,7 +747,7 @@ onUnmounted(() => {
               :style="{ left: monthData.standardTotalPercent + '%' }">
               <span
                 class="text-[10px] font-bold text-gray-400 bg-white border border-gray-100 px-1.5 py-0.5 rounded shadow-sm">{{
-                  monthData.standardTotalHours }}h</span>
+                  monthData.teamAvgTotalHours ? monthData.teamAvgTotalHours.toFixed(2) : '-' }}h</span>
               <div class="w-px h-2 bg-gray-200 mt-0.5"></div>
             </div>
 
@@ -699,7 +786,7 @@ onUnmounted(() => {
 
             <div class="px-3 py-1 bg-gray-50 rounded-full border border-gray-100 flex items-center gap-2">
               <div class="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-              <span class="text-xs font-semibold text-gray-500">{{currentMonth.split('-')[1]}} 月团队平均 {{ monthData.standardDays }} 天</span>
+              <span class="text-xs font-semibold text-gray-500">{{currentMonth.split('-')[1]}} 月团队平均 {{ monthData.teamAvgDailyHours ? monthData.teamAvgDailyHours.toFixed(2) : '-' }} h</span>
             </div>
           </div>
 
@@ -717,7 +804,7 @@ onUnmounted(() => {
               class="absolute -top-7 transform -translate-x-1/2 flex flex-col items-center transition-all duration-500"
               :style="{ left: monthData.standardDailyPercent + '%' }">
               <span
-                class="text-[10px] font-bold text-gray-400 bg-white border border-gray-100 px-1.5 py-0.5 rounded shadow-sm">9h</span>
+                class="text-[10px] font-bold text-gray-400 bg-white border border-gray-100 px-1.5 py-0.5 rounded shadow-sm">{{ monthData.teamAvgDailyHours ? monthData.teamAvgDailyHours.toFixed(2) : '-' }}h</span>
               <div class="w-px h-2 bg-gray-200 mt-0.5"></div>
             </div>
 

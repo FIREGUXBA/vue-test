@@ -200,7 +200,8 @@ const footerStats = computed(() => {
       bottomHours: [],
       topMissing: [],
       topLeave: [],
-      topLate: []
+      topLate: [],
+      avgHoursRanking: []
     }
   }
 
@@ -282,13 +283,42 @@ const footerStats = computed(() => {
     .slice(0, 6)
     .map(i => ({ name: i.name, dept: i.dept, value: i.stats.leave, unit: '天' }))
 
+  // 3. 平均工时投入排名：计算每个员工在查询月份范围内的日均工时平均值
+  const getAvgDailyHours = (employee) => {
+    const dailyHoursList = []
+    monthKeys.value.forEach(m => {
+      const val = employee.monthlyHours[m]
+      if (val !== undefined && val !== null) {
+        dailyHoursList.push(val)
+      }
+    })
+    if (dailyHoursList.length === 0) {
+      return 0
+    }
+    // 计算平均值
+    const sum = dailyHoursList.reduce((acc, val) => acc + val, 0)
+    return sum / dailyHoursList.length
+  }
+
+  const avgHoursRanking = [...currentData]
+    .map(d => ({ ...d, avgDailyHours: getAvgDailyHours(d) }))
+    .sort((a, b) => b.avgDailyHours - a.avgDailyHours)
+    .slice(0, 6)
+    .map(i => ({
+      name: i.name,
+      dept: i.dept,
+      value: parseFloat(i.avgDailyHours.toFixed(2)),
+      unit: 'h'
+    }))
+
   return {
     avgAll,
     topHours,
     bottomHours,
     topMissing,
     topLeave,
-    topLate
+    topLate,
+    avgHoursRanking
   }
 })
 
@@ -670,10 +700,10 @@ onUnmounted(() => {
       <!-- <SummaryCard :title="showTotalHours ? '平均总工时' : '平均工时'" type="single" color="green" :icon="IconChart"
         :data="{ value: footerStats.avgAll, unit: '小时', subtitle: '' }" /> -->
 
-      <SummaryCard :title="showTotalHours ? '总工时投入' : '平均工时投入'" type="double-list" :limit="6" color="green" :icon="IconChart"
+      <SummaryCard title="总工时投入" type="double-list" :limit="6" color="green" :icon="IconChart"
         :data="{ top: footerStats.topHours, bottom: footerStats.bottomHours }" />
 
-      <SummaryCard title="总工时投入" type="list" color="blue" :limit="6" :icon="IconTrendUp" :data="footerStats.topHours" />
+      <SummaryCard title="平均工时投入" type="list" color="blue" :limit="6" :icon="IconTrendUp" :data="footerStats.avgHoursRanking" />
 
       <SummaryCard title="补卡次数" type="list" color="orange" :limit="6" :icon="IconFileText"
         :data="footerStats.topMissing" />
