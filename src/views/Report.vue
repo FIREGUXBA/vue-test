@@ -367,7 +367,7 @@ onUnmounted(() => {
         <!-- 选择姓名 -->
         <div class="relative dropdown-container">
           <button @click.stop="toggleNameDropdown(); fetchEmployeeList()"
-            class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-300 border relative overflow-hidden group"
+            class="flex items-center gap-2 px-3 h-[34px] rounded-lg text-[13px] font-medium transition-all duration-300 border relative overflow-hidden group"
             :class="showNameDropdown || selectedNames.length > 0
               ? 'bg-blue-50 hover:bg-blue-50 text-blue-700 border-blue-300 shadow-sm'
               : 'bg-gray-200/50 hover:bg-gray-200 text-gray-700 border-transparent hover:border-blue-500/30 hover:shadow-sm'">
@@ -410,7 +410,7 @@ onUnmounted(() => {
         <!-- 部门输入框（模糊查询） -->
         <div class="relative">
           <div
-            class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-300 border bg-gray-200/50 hover:bg-gray-200 text-gray-700 border-transparent hover:border-blue-500/30 hover:shadow-sm">
+            class="flex items-center gap-2 px-3 h-[34px] rounded-lg text-[13px] font-medium transition-all duration-300 border bg-gray-200/50 hover:bg-gray-200 text-gray-700 border-transparent hover:border-blue-500/30 hover:shadow-sm">
             <IconFilter class="w-4 h-4 text-gray-500"></IconFilter>
             <input v-model="departmentInput" type="text" placeholder="部门（模糊查询）"
               class="flex-1 outline-none bg-transparent text-[13px] text-gray-700 placeholder-gray-400 min-w-[120px]"
@@ -421,7 +421,7 @@ onUnmounted(() => {
         <!-- 选择月份范围 -->
         <div class="relative dropdown-container">
           <button @click.stop="toggleMonthDropdown(); fetchMonthList()"
-            class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-300 border relative overflow-hidden group"
+            class="flex items-center gap-2 px-3 h-[34px] rounded-lg text-[13px] font-medium transition-all duration-300 border relative overflow-hidden group"
             :class="showMonthDropdown
               ? 'bg-blue-50 hover:bg-blue-50 text-blue-700 border-blue-300 shadow-sm'
               : 'bg-gray-200/50 hover:bg-gray-200 text-gray-700 border-transparent hover:border-blue-500/30 hover:shadow-sm'">
@@ -487,33 +487,13 @@ onUnmounted(() => {
           </transition>
         </div>
 
-        <div class="h-7 w-px bg-gray-200 transition-opacity duration-300"></div>
 
-        <!-- 工时显示模式切换 -->
-        <div class="flex items-center gap-2 px-1 py-1 rounded-lg bg-gray-200/50 hover:bg-gray-200 border border-transparent hover:border-blue-500/30 transition-all duration-300">
-          <button
-            @click="showTotalHours = false"
-            class="px-2.5 py-1 rounded-md text-[12px] font-medium transition-all duration-200"
-            :class="!showTotalHours
-              ? 'bg-blue-500 text-white shadow-sm'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
-            平均工时
-          </button>
-          <button
-            @click="showTotalHours = true"
-            class="px-2.5 py-1 rounded-md text-[12px] font-medium transition-all duration-200"
-            :class="showTotalHours
-              ? 'bg-blue-500 text-white shadow-sm'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
-            总工时
-          </button>
-        </div>
 
-        <div class="h-7 w-px bg-gray-200 transition-opacity duration-300"></div>
+        <div class="h-[34px] w-px bg-gray-200 transition-opacity duration-300"></div>
 
         <!-- 查询按钮 -->
         <button @click="handleQuery" :disabled="loading || !isMonthRangeValid"
-          class="flex items-center px-5 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-300 border relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+          class="flex items-center px-5 h-[34px] rounded-lg text-[13px] font-medium transition-all duration-300 border relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
           :class="loading || !isMonthRangeValid
             ? 'bg-gray-100 text-gray-400 border-gray-200'
             : 'bg-[#007AFF] hover:bg-[#0062CC] text-white border-[#007AFF] hover:shadow-md'">
@@ -527,8 +507,8 @@ onUnmounted(() => {
           <span v-else>查询</span>
         </button>
 
-        <div v-if="hasSearched"
-          class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-all duration-300 group">
+        <!-- <div v-if="hasSearched"
+          class="flex items-center gap-2 px-3 h-[34px] rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-all duration-300 group">
           <div
             class="bg-gray-100 p-1.5 rounded-lg text-gray-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all duration-300">
             <IconUsers class="w-3 h-3"></IconUsers>
@@ -536,11 +516,35 @@ onUnmounted(() => {
           <span
             class="text-[13px] font-semibold text-gray-800 group-hover:text-blue-700 transition-colors duration-300">{{
               data.length }} 人</span>
-        </div>
+        </div> -->
 
+        <!-- <div class="h-[34px] w-px bg-gray-200 transition-opacity duration-300"></div> -->
+
+        <!-- 工时显示模式切换 -->
+        <div class="flex items-center h-[34px]">
+          <button
+            @click="showTotalHours = !showTotalHours"
+            class="relative inline-flex items-center justify-between h-[34px] w-[88px] px-1 rounded-full transition-colors duration-300 focus:outline-none "
+            :class="showTotalHours ? 'bg-violet-500' : 'bg-blue-500'">
+            <span 
+              class="absolute left-3 text-[12px] font-medium transition-colors duration-300 z-10"
+              :class="showTotalHours ? 'text-white' : 'text-gray-700/0'">
+              总工时
+            </span>
+            <span
+              class="absolute inline-block h-[26px] w-[26px] bg-white rounded-full shadow-md transform transition-transform duration-300 z-20"
+              :class="showTotalHours ? 'translate-x-[54px]' : 'translate-x-[0px]'"
+            </span>
+            <span 
+              class="absolute right-1.5 text-[12px] font-medium transition-colors duration-300 z-10"
+              :class="showTotalHours ? 'text-white/0' : 'text-white'">
+              平均工时
+            </span>
+          </button>
+        </div>
       </div>
       <div
-        class="flex items-center gap-3 px-3 py-1.5 ">
+        class="flex items-center gap-3 px-3 h-[34px]">
         <div
           class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 transition-all duration-300 hover:scale-105">
           <span class="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.4)] "></span>
@@ -657,14 +661,14 @@ onUnmounted(() => {
       <SummaryCard :title="showTotalHours ? '平均总工时' : '平均工时'" type="single" color="green" :icon="IconChart"
         :data="{ value: footerStats.avgAll, unit: '小时', subtitle: '' }" />
 
-      <SummaryCard title="工时投入榜" type="list" color="blue" :limit="5" :icon="IconTrendUp" :data="footerStats.topHours" />
+      <SummaryCard title="工时投入" type="list" color="blue" :limit="5" :icon="IconTrendUp" :data="footerStats.topHours" />
 
-      <SummaryCard title="工时不足榜" type="list" color="orange" :limit="5" :icon="IconTrendDown"
-        :data="footerStats.bottomHours" />
+      <SummaryCard title="补卡次数" type="list" color="orange" :limit="5" :icon="IconTrendDown"
+        :data="footerStats.topMissing" />
 
-      <SummaryCard title="迟到次数榜" type="list" color="red" :limit="5" :icon="IconClock" :data="footerStats.topLate" />
+      <SummaryCard title="迟到次数" type="list" color="red" :limit="5" :icon="IconClock" :data="footerStats.topLate" />
 
-      <SummaryCard title="请假天数榜" type="list" color="purple" :limit="5" :icon="IconCalendar"
+      <SummaryCard title="请假天数" type="list" color="purple" :limit="5" :icon="IconCalendar"
         :data="footerStats.topLeave" />
 
     </div>
