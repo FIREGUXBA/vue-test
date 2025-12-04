@@ -629,7 +629,7 @@ onUnmounted(() => {
 
             <div class="px-3 py-1 bg-gray-50 rounded-full border border-gray-100 flex items-center gap-2">
               <div class="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-              <span class="text-xs font-semibold text-gray-500">{{currentMonth.split('-')[1]}} 月标准 {{ monthData.standardTotalHours }} h</span>
+              <span class="text-xs font-semibold text-gray-500">{{currentMonth.split('-')[1]}} 月团队平均 {{ monthData.standardTotalHours }} h</span>
             </div>
           </div>
 
@@ -699,7 +699,7 @@ onUnmounted(() => {
 
             <div class="px-3 py-1 bg-gray-50 rounded-full border border-gray-100 flex items-center gap-2">
               <div class="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-              <span class="text-xs font-semibold text-gray-500">{{currentMonth.split('-')[1]}} 月标准 {{ monthData.standardDays }} 天</span>
+              <span class="text-xs font-semibold text-gray-500">{{currentMonth.split('-')[1]}} 月团队平均 {{ monthData.standardDays }} 天</span>
             </div>
           </div>
 

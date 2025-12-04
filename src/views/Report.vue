@@ -9,6 +9,7 @@ import IconChart from '../components/icons/IconChart.vue'
 import IconTrendUp from '../components/icons/IconTrendUp.vue'
 import IconTrendDown from '../components/icons/IconTrendDown.vue'
 import IconClock from '../components/icons/IconClock.vue'
+import IconFileText from '../components/icons/IconFileText.vue'
 import { getCellColor } from '../utils/data'
 import { getEmployees, getMonthList, queryReportData } from '../utils/api/modules/report'
 const showToast = inject('showToast')
@@ -53,7 +54,7 @@ const normalizeData = (apiData) => {
       employeeMap[employeeId] = {
         id: item.id || employeeId,
         name: employee.name || '',
-        dept: employee.second_level_dept || employee.third_level_dept || '',
+        dept: '',
         monthlyHours: {},
         monthlyTotalHours: {},
         stats: {
@@ -228,22 +229,22 @@ const footerStats = computed(() => {
       return sum + (val !== undefined && val !== null ? val : 0)
     }, 0)
   }
-  
+
   const topHours = [...currentData]
     .map(d => ({ ...d, totalHoursSum: getTotalHoursSum(d) }))
     .sort((a, b) => b.totalHoursSum - a.totalHoursSum)
-    .slice(0, 5)
+    .slice(0, 6)
     .map(i => ({
       name: i.name,
       dept: i.dept,
       value: parseFloat(i.totalHoursSum.toFixed(2)),
       unit: 'h'
     }))
-  
+
   const bottomHours = [...currentData]
     .map(d => ({ ...d, totalHoursSum: getTotalHoursSum(d) }))
     .sort((a, b) => a.totalHoursSum - b.totalHoursSum)
-    .slice(0, 5)
+    .slice(0, 6)
     .map(i => ({
       name: i.name,
       dept: i.dept,
@@ -254,19 +255,19 @@ const footerStats = computed(() => {
   const topMissing = [...currentData]
     .sort((a, b) => b.stats.missingCard - a.stats.missingCard)
     .filter(i => i.stats.missingCard > 0)
-    .slice(0, 5)
+    .slice(0, 6)
     .map(i => ({ name: i.name, dept: i.dept, value: i.stats.missingCard, unit: '次' }))
 
   const topLate = [...currentData]
     .sort((a, b) => b.stats.late - a.stats.late)
     .filter(i => i.stats.late > 0)
-    .slice(0, 5)
+    .slice(0, 6)
     .map(i => ({ name: i.name, dept: i.dept, value: i.stats.late, unit: '次' }))
 
   const topLeave = [...currentData]
     .sort((a, b) => b.stats.leave - a.stats.leave)
     .filter(i => i.stats.leave > 0)
-    .slice(0, 5)
+    .slice(0, 6)
     .map(i => ({ name: i.name, dept: i.dept, value: i.stats.leave, unit: '天' }))
 
   return {
@@ -522,29 +523,24 @@ onUnmounted(() => {
 
         <!-- 工时显示模式切换 -->
         <div class="flex items-center h-[34px]">
-          <button
-            @click="showTotalHours = !showTotalHours"
+          <button @click="showTotalHours = !showTotalHours"
             class="relative inline-flex items-center justify-between h-[34px] w-[88px] px-1 rounded-full transition-colors duration-300 focus:outline-none "
             :class="showTotalHours ? 'bg-violet-500' : 'bg-blue-500'">
-            <span 
-              class="absolute left-3 text-[12px] font-medium transition-colors duration-300 z-10"
+            <span class="absolute left-3 text-[12px] font-medium transition-colors duration-300 z-10"
               :class="showTotalHours ? 'text-white' : 'text-gray-700/0'">
               总工时
             </span>
             <span
               class="absolute inline-block h-[26px] w-[26px] bg-white rounded-full shadow-md transform transition-transform duration-300 z-20"
-              :class="showTotalHours ? 'translate-x-[54px]' : 'translate-x-[0px]'"
-            </span>
-            <span 
-              class="absolute right-1.5 text-[12px] font-medium transition-colors duration-300 z-10"
-              :class="showTotalHours ? 'text-white/0' : 'text-white'">
-              平均工时
-            </span>
+              :class="showTotalHours ? 'translate-x-[54px]' : 'translate-x-[0px]'" </span>
+              <span class="absolute right-1.5 text-[12px] font-medium transition-colors duration-300 z-10"
+                :class="showTotalHours ? 'text-white/0' : 'text-white'">
+                平均工时
+              </span>
           </button>
         </div>
       </div>
-      <div
-        class="flex items-center gap-3 px-3 h-[34px]">
+      <div class="flex items-center gap-3 px-3 h-[34px]">
         <div
           class="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 transition-all duration-300 hover:scale-105">
           <span class="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.4)] "></span>
@@ -576,7 +572,8 @@ onUnmounted(() => {
     </div>
 
     <!-- 数据表格（仅在查询后且有数据时显示） -->
-    <div v-if="hasSearched && !loading && data.length > 0" class="rounded-xl overflow-hidden bg-white/80 border border-gray-200 shadow-sm">
+    <div v-if="hasSearched && !loading && data.length > 0"
+      class="rounded-xl overflow-hidden bg-white/80 border border-gray-200 shadow-sm">
       <div class="overflow-x-auto custom-scrollbar">
         <table class="min-w-full border-collapse">
           <thead>
@@ -658,17 +655,20 @@ onUnmounted(() => {
     <div v-if="hasSearched && !loading && data.length > 0"
       class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5 pb-12">
 
-      <SummaryCard :title="showTotalHours ? '平均总工时' : '平均工时'" type="single" color="green" :icon="IconChart"
-        :data="{ value: footerStats.avgAll, unit: '小时', subtitle: '' }" />
+      <!-- <SummaryCard :title="showTotalHours ? '平均总工时' : '平均工时'" type="single" color="green" :icon="IconChart"
+        :data="{ value: footerStats.avgAll, unit: '小时', subtitle: '' }" /> -->
 
-      <SummaryCard title="工时投入" type="list" color="blue" :limit="5" :icon="IconTrendUp" :data="footerStats.topHours" />
+      <SummaryCard :title="showTotalHours ? '总工时投入' : '平均工时投入'" type="double-list" :limit="6" color="green" :icon="IconChart"
+        :data="{ top: footerStats.topHours, bottom: footerStats.bottomHours }" />
 
-      <SummaryCard title="补卡次数" type="list" color="orange" :limit="5" :icon="IconTrendDown"
+      <SummaryCard title="总工时投入" type="list" color="blue" :limit="6" :icon="IconTrendUp" :data="footerStats.topHours" />
+
+      <SummaryCard title="补卡次数" type="list" color="orange" :limit="6" :icon="IconFileText"
         :data="footerStats.topMissing" />
 
-      <SummaryCard title="迟到次数" type="list" color="red" :limit="5" :icon="IconClock" :data="footerStats.topLate" />
+      <SummaryCard title="迟到次数" type="list" color="red" :limit="6" :icon="IconClock" :data="footerStats.topLate" />
 
-      <SummaryCard title="请假天数" type="list" color="purple" :limit="5" :icon="IconCalendar"
+      <SummaryCard title="请假天数" type="list" color="purple" :limit="6" :icon="IconCalendar"
         :data="footerStats.topLeave" />
 
     </div>
