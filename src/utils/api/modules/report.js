@@ -18,7 +18,7 @@ export const getMonthList = () => {
  * @returns {Promise}
  */
 export const getEmployees = (params) => {
-  return get('/employees', params)
+  return get('/employees/', params)
 }
 
 /**

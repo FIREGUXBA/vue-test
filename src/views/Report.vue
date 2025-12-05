@@ -492,7 +492,7 @@ const handleClickOutside = (event) => {
 const fetchEmployeeList = async () => {
   loadingEmployees.value = true
   try {
-    const result = await getEmployees({})
+    const result = await getEmployees({ skip: 0, limit: 100 })
     // 后端返回的数据格式为数组，包含 employee_id, name, second_level_dept, third_level_dept 等字段
     employeeList.value = Array.isArray(result) ? result : []
   } catch (err) {
