@@ -1,6 +1,8 @@
 <script setup>
-import { computed } from 'vue'
+import { computed , ref } from 'vue'
 import IconAlert from './icons/IconAlert.vue'
+
+const showSum = ref(false)
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -120,12 +122,16 @@ const doubleListData = computed(() => {
   if (typeof props.data === 'object' && props.data.top && props.data.bottom) {
     return {
       top: props.data.top.slice(0, props.limit / 2),
-      bottom: props.data.bottom.slice(0, props.limit / 2).reverse()
+      bottom: props.data.bottom.slice(0, props.limit / 2).reverse(),
+      avg:props.data.avg,
+      monthCount:props.data.monthCount
     }
   }
   return {
     top: [],
-    bottom: []
+    bottom: [],
+    avg: 0,
+    monthCount: 1
   }
 })
 </script>
@@ -141,7 +147,23 @@ const doubleListData = computed(() => {
       <div class="flex flex-col leading-none">
         <span class="text-[13px] font-semibold text-slate-700 tracking-tight">{{ title }}</span>
         <span class="text-[10px] text-gray-400 mt-1 font-medium" v-if="type === 'list'">Top {{ limit }}</span>
-        <span class="text-[10px] text-gray-400 mt-1 font-medium" v-if="type === 'double-list'">Top {{ limit / 2 }} / Bottom {{ limit / 2 }}</span>
+        <span class="text-[10px] text-gray-400 mt-1 font-medium" v-if="type === 'double-list'">Top {{ limit / 2 }} /
+          Bottom {{ limit / 2 }}</span>
+      </div>
+      <!-- 切换开关（仅在 double-list 模式且有 avgByMonth 数据时显示） -->
+      <div v-if="type === 'double-list' " class="flex flex-1 justify-end items-center gap-2">
+        <span class="text-[10px] text-gray-500 font-medium"
+          :class="!showSum ? 'text-gray-700' : 'text-gray-400'">{{doubleListData.monthCount }}个月平均</span>
+        <button @click="showSum = !showSum"
+          class="relative inline-flex items-center justify-between h-5 w-9 px-0.5 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-1"
+          :class="showSum ? theme.bg : 'bg-gray-300'">
+          <span
+            class="absolute inline-block h-4 w-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 z-10"
+            :class="showSum ? 'translate-x-4' : 'translate-x-0'">
+          </span>
+        </button>
+        <span class="text-[10px] text-gray-500 font-medium"
+          :class="showSum ? 'text-gray-700' : 'text-gray-400'">{{doubleListData.monthCount }}个月总和</span>
       </div>
     </div>
 
@@ -216,7 +238,7 @@ const doubleListData = computed(() => {
             <div class="flex items-center gap-1 pl-2">
               <span class="text-[13px] font-bold font-mono tracking-tight tabular-nums text-right"
                 :class="idx < 3 ? 'text-slate-800' : 'text-slate-500'">
-                {{ formatValue(item.value, item.unit) }}
+                {{ showSum ? formatValue(item.value, item.unit) : formatValue((item.value / doubleListData.monthCount).toFixed(2), item.unit) }}
               </span>
               <span class="text-[10px] text-gray-400 scale-90 origin-left">{{ item.unit }}</span>
             </div>
@@ -224,11 +246,11 @@ const doubleListData = computed(() => {
         </div>
 
         <!-- 分隔线 - 省略号提示 -->
-        <div v-if="doubleListData.top.length > 0 && doubleListData.bottom.length > 0" 
-          class="relative flex items-center justify-center h-2">
-          <div class="flex items-center gap-1 text-gray-500 mb-1">
-            <span class="text-2xl leading-none">·····</span>
-          </div>
+        <div v-if="doubleListData.top.length > 0 && doubleListData.bottom.length > 0"
+          class="relative flex items-center justify-center h-3">
+          <span class="text-[12px] text-gray-500 scale-90 origin-left">平均值</span>
+          <div class="flex flex-1 h-0 border-b border-gray-300 border-dashed "></div>
+          <span class="text-[12px] text-gray-500 scale-90 origin-left">{{ showSum ? doubleListData.avg : (doubleListData.avg / doubleListData.monthCount).toFixed(2) }}</span>
         </div>
 
         <!-- Bottom 列表 -->
@@ -245,7 +267,7 @@ const doubleListData = computed(() => {
                   }
                   return 'bg-gray-100 text-gray-400 shadow-sm';
                 })()">
-                 <IconAlert class="w-3 h-3" />
+                <IconAlert class="w-3 h-3" />
               </div>
 
               <div class="flex flex-col min-w-0">
@@ -254,12 +276,11 @@ const doubleListData = computed(() => {
             </div>
 
             <div class="flex items-center gap-1 pl-2">
-              <span class="text-[13px] font-bold font-mono tracking-tight tabular-nums text-right"
-                :class="(() => {
-                  const rank = idx + doubleListData.top.length;
-                  return rank < 3 ? 'text-slate-800' : 'text-slate-500';
-                })()">
-                {{ formatValue(item.value, item.unit) }}
+              <span class="text-[13px] font-bold font-mono tracking-tight tabular-nums text-right" :class="(() => {
+                const rank = idx + doubleListData.top.length;
+                return rank < 3 ? 'text-slate-800' : 'text-slate-500';
+              })()">
+                {{ showSum ? formatValue(item.value, item.unit) : formatValue((item.value / doubleListData.monthCount).toFixed(2), item.unit) }}
               </span>
               <span class="text-[10px] text-gray-400 scale-90 origin-left">{{ item.unit }}</span>
             </div>
@@ -267,7 +288,7 @@ const doubleListData = computed(() => {
         </div>
 
         <!-- 空状态 -->
-        <div v-if="!doubleListData.top.length && !doubleListData.bottom.length" 
+        <div v-if="!doubleListData.top.length && !doubleListData.bottom.length"
           class="flex flex-col items-center justify-center py-8 text-gray-300">
           <div class="w-8 h-8 rounded-full bg-gray-50 border border-gray-100 mb-2"></div>
           <span class="text-xs">暂无数据</span>

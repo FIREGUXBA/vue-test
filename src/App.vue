@@ -179,7 +179,7 @@ const avatarUrl = computed(() => {
             </router-link>
           </nav>
           <!-- 头像个人信息 -->
-          <div class="flex items-center gap-3 px-4 py-2 bg-white/70 hover:bg-white/90 transition-all duration-300">
+          <div class="flex items-center gap-3 px-4 py-2 hover:bg-white/90 transition-all duration-300">
             <div class="relative">
               <img 
                 :src="avatarUrl" 

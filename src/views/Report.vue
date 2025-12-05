@@ -195,47 +195,27 @@ const columnValues = computed(() => {
 const footerStats = computed(() => {
   if (!hasSearched.value || !data.value || data.value.length === 0) {
     return {
-      avgAll: 0,
-      topHours: [],
-      bottomHours: [],
+      avgTotalHours: 0,
+      avgTotalHoursAvgByMonth: [],
+      avgDailyHours: 0,
+      avgDailyHoursAvgByMonth: [],
+      topTotalHours: [],
+      topTotalHoursAvgByMonth: [],
+      bottomTotalHours: [],
+      bottomTotalHoursAvgByMonth: [],
+      topDailyHours: [],
+      bottomDailyHours: [],
+      topDailyHoursAvgByMonth: [],
+      bottomDailyHoursAvgByMonth: [],
       topMissing: [],
       topLeave: [],
-      topLate: [],
-      avgHoursRanking: []
+      topLate: []
     }
   }
 
   const currentData = [...data.value]
 
-  // 辅助函数：标准排序并格式化
-  const getRanking = (sortFn, valKey, unit, limit = 5) => {
-    return [...currentData]
-      .sort(sortFn)
-      .slice(0, limit)
-      .map(i => {
-        const val = valKey.split('.').reduce((o, k) => (o || {})[k], i)
-        return {
-          name: i.name,
-          dept: i.dept,
-          value: val,
-          unit: unit
-        }
-      })
-  }
-
-  // 1. 平均工时（根据切换状态计算）
-  let totalSum = 0, totalCount = 0
-  const field = currentHoursField.value
-  currentData.forEach(d => monthKeys.value.forEach(m => {
-    if (d[field][m] !== undefined && d[field][m] !== null) {
-      totalSum += d[field][m];
-      totalCount++
-    }
-  }))
-  const avgAll = totalCount > 0 ? (totalSum / totalCount).toFixed(2) : '0.00'
-
-  // 2. 各类排行
-  // 工时投入榜和工时不足榜始终根据总工时（monthlyTotalHours）计算
+  // 各类排行
   const getTotalHoursSum = (employee) => {
     return monthKeys.value.reduce((sum, m) => {
       const val = employee.monthlyTotalHours[m]
@@ -243,7 +223,35 @@ const footerStats = computed(() => {
     }, 0)
   }
 
-  const topHours = [...currentData]
+  const getAvgTotalHours = (employees) => {
+    if (!employees || employees.length === 0) return 0
+    const totalSum = employees.reduce((total, employee) => {
+      const employeeSum = monthKeys.value.reduce((sum, m) => {
+        const val = employee.monthlyTotalHours[m]
+        return sum + (val !== undefined && val !== null ? val : 0)
+      }, 0)
+      return total + employeeSum
+    }, 0)
+    return parseFloat((totalSum / employees.length).toFixed(2))
+  }
+
+  // 所有员工总工时的月度平均值
+  const avgTotalHoursAvgByMonth = monthKeys.value.map(month => {
+    const monthValues = currentData
+      .map(emp => emp.monthlyTotalHours[month])
+      .filter(val => val !== undefined && val !== null)
+    
+    if (monthValues.length === 0) return { month, value: 0, unit: 'h' }
+    
+    const avg = monthValues.reduce((sum, val) => sum + val, 0) / monthValues.length
+    return {
+      month,
+      value: parseFloat(avg.toFixed(2)),
+      unit: 'h'
+    }
+  })
+
+  const topTotalHours = [...currentData]
     .map(d => ({ ...d, totalHoursSum: getTotalHoursSum(d) }))
     .sort((a, b) => b.totalHoursSum - a.totalHoursSum)
     .slice(0, 6)
@@ -254,7 +262,7 @@ const footerStats = computed(() => {
       unit: 'h'
     }))
 
-  const bottomHours = [...currentData]
+  const bottomTotalHours = [...currentData]
     .map(d => ({ ...d, totalHoursSum: getTotalHoursSum(d) }))
     .sort((a, b) => a.totalHoursSum - b.totalHoursSum)
     .slice(0, 6)
@@ -264,6 +272,147 @@ const footerStats = computed(() => {
       value: parseFloat(i.totalHoursSum.toFixed(2)),
       unit: 'h'
     }))
+
+  // 总工时前6名的月度平均值
+  const topTotalHoursAvgByMonth = monthKeys.value.map(month => {
+    const topEmployees = [...currentData]
+      .map(d => ({ ...d, totalHoursSum: getTotalHoursSum(d) }))
+      .sort((a, b) => b.totalHoursSum - a.totalHoursSum)
+      .slice(0, 6)
+    
+    const monthValues = topEmployees
+      .map(emp => emp.monthlyTotalHours[month])
+      .filter(val => val !== undefined && val !== null)
+    
+    if (monthValues.length === 0) return { month, value: 0, unit: 'h' }
+    
+    const avg = monthValues.reduce((sum, val) => sum + val, 0) / monthValues.length
+    return {
+      month,
+      value: parseFloat(avg.toFixed(2)),
+      unit: 'h'
+    }
+  })
+
+  // 总工时后6名的月度平均值
+  const bottomTotalHoursAvgByMonth = monthKeys.value.map(month => {
+    const bottomEmployees = [...currentData]
+      .map(d => ({ ...d, totalHoursSum: getTotalHoursSum(d) }))
+      .sort((a, b) => a.totalHoursSum - b.totalHoursSum)
+      .slice(0, 6)
+    
+    const monthValues = bottomEmployees
+      .map(emp => emp.monthlyTotalHours[month])
+      .filter(val => val !== undefined && val !== null)
+    
+    if (monthValues.length === 0) return { month, value: 0, unit: 'h' }
+    
+    const avg = monthValues.reduce((sum, val) => sum + val, 0) / monthValues.length
+    return {
+      month,
+      value: parseFloat(avg.toFixed(2)),
+      unit: 'h'
+    }
+  })
+
+  const getDailyHoursSum = (employee) => {
+    return monthKeys.value.reduce((sum, m) => {
+      const val = employee.monthlyHours[m]
+      return sum + (val !== undefined && val !== null ? val : 0)
+    }, 0)
+  }
+  const getAvgDailyHours = (employees) => {
+    if (!employees || employees.length === 0) return 0
+    const totalSum = employees.reduce((total, employee) => {
+      const employeeSum = monthKeys.value.reduce((sum, m) => {
+        const val = employee.monthlyHours[m]
+        return sum + (val !== undefined && val !== null ? val : 0)
+      }, 0)
+      return total + employeeSum
+    }, 0)
+    return parseFloat((totalSum / employees.length).toFixed(2))
+  }
+
+  // 所有员工日均工时的月度平均值
+  const avgDailyHoursAvgByMonth = monthKeys.value.map(month => {
+    const monthValues = currentData
+      .map(emp => emp.monthlyHours[month])
+      .filter(val => val !== undefined && val !== null)
+    
+    if (monthValues.length === 0) return { month, value: 0, unit: 'h' }
+    
+    const avg = monthValues.reduce((sum, val) => sum + val, 0) / monthValues.length
+    return {
+      month,
+      value: parseFloat(avg.toFixed(2)),
+      unit: 'h'
+    }
+  })
+
+  const topDailyHours = [...currentData]
+    .map(d => ({ ...d, dailyHoursSum: getDailyHoursSum(d) }))
+    .sort((a, b) => b.dailyHoursSum - a.dailyHoursSum)
+    .slice(0, 6)
+    .map(i => ({
+      name: i.name,
+      dept: i.dept,
+      value: parseFloat(i.dailyHoursSum.toFixed(2)),
+      unit: 'h'
+    }))
+
+  const bottomDailyHours = [...currentData]
+    .map(d => ({ ...d, dailyHoursSum: getDailyHoursSum(d) }))
+    .sort((a, b) => a.dailyHoursSum - b.dailyHoursSum)
+    .slice(0, 6)
+    .map(i => ({
+      name: i.name,
+      dept: i.dept,
+      value: parseFloat(i.dailyHoursSum.toFixed(2)),
+      unit: 'h'
+    }))
+
+  // 日均工时前6名的月度平均值
+  const topDailyHoursAvgByMonth = monthKeys.value.map(month => {
+    const topEmployees = [...currentData]
+      .map(d => ({ ...d, dailyHoursSum: getDailyHoursSum(d) }))
+      .sort((a, b) => b.dailyHoursSum - a.dailyHoursSum)
+      .slice(0, 6)
+    
+    const monthValues = topEmployees
+      .map(emp => emp.monthlyHours[month])
+      .filter(val => val !== undefined && val !== null)
+    
+    if (monthValues.length === 0) return { month, value: 0, unit: 'h' }
+    
+    const avg = monthValues.reduce((sum, val) => sum + val, 0) / monthValues.length
+    return {
+      month,
+      value: parseFloat(avg.toFixed(2)),
+      unit: 'h'
+    }
+  })
+
+  // 日均工时后6名的月度平均值
+  const bottomDailyHoursAvgByMonth = monthKeys.value.map(month => {
+    const bottomEmployees = [...currentData]
+      .map(d => ({ ...d, dailyHoursSum: getDailyHoursSum(d) }))
+      .sort((a, b) => a.dailyHoursSum - b.dailyHoursSum)
+      .slice(0, 6)
+    
+    const monthValues = bottomEmployees
+      .map(emp => emp.monthlyHours[month])
+      .filter(val => val !== undefined && val !== null)
+    
+    if (monthValues.length === 0) return { month, value: 0, unit: 'h' }
+    
+    const avg = monthValues.reduce((sum, val) => sum + val, 0) / monthValues.length
+    return {
+      month,
+      value: parseFloat(avg.toFixed(2)),
+      unit: 'h'
+    }
+  })
+
 
   const topMissing = [...currentData]
     .sort((a, b) => b.stats.missingCard - a.stats.missingCard)
@@ -283,42 +432,22 @@ const footerStats = computed(() => {
     .slice(0, 6)
     .map(i => ({ name: i.name, dept: i.dept, value: i.stats.leave, unit: '天' }))
 
-  // 3. 平均工时投入排名：计算每个员工在查询月份范围内的日均工时平均值
-  const getAvgDailyHours = (employee) => {
-    const dailyHoursList = []
-    monthKeys.value.forEach(m => {
-      const val = employee.monthlyHours[m]
-      if (val !== undefined && val !== null) {
-        dailyHoursList.push(val)
-      }
-    })
-    if (dailyHoursList.length === 0) {
-      return 0
-    }
-    // 计算平均值
-    const sum = dailyHoursList.reduce((acc, val) => acc + val, 0)
-    return sum / dailyHoursList.length
-  }
-
-  const avgHoursRanking = [...currentData]
-    .map(d => ({ ...d, avgDailyHours: getAvgDailyHours(d) }))
-    .sort((a, b) => b.avgDailyHours - a.avgDailyHours)
-    .slice(0, 6)
-    .map(i => ({
-      name: i.name,
-      dept: i.dept,
-      value: parseFloat(i.avgDailyHours.toFixed(2)),
-      unit: 'h'
-    }))
-
   return {
-    avgAll,
-    topHours,
-    bottomHours,
-    topMissing,
-    topLeave,
-    topLate,
-    avgHoursRanking
+    avgTotalHours: getAvgTotalHours(currentData),
+    avgTotalHoursAvgByMonth: avgTotalHoursAvgByMonth,
+    avgDailyHours: getAvgDailyHours(currentData),
+    avgDailyHoursAvgByMonth: avgDailyHoursAvgByMonth,
+    topTotalHours: topTotalHours,
+    topTotalHoursAvgByMonth: topTotalHoursAvgByMonth,
+    bottomTotalHours: bottomTotalHours,
+    bottomTotalHoursAvgByMonth: bottomTotalHoursAvgByMonth,
+    topDailyHours: topDailyHours,
+    bottomDailyHours: bottomDailyHours,
+    topDailyHoursAvgByMonth: topDailyHoursAvgByMonth,
+    bottomDailyHoursAvgByMonth: bottomDailyHoursAvgByMonth,
+    topMissing: topMissing,
+    topLeave: topLeave,
+    topLate: topLate
   }
 })
 
@@ -695,15 +824,16 @@ onUnmounted(() => {
 
     <!-- 统计卡片（仅在查询后显示） -->
     <div v-if="hasSearched && !loading && data.length > 0"
-      class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5 pb-12">
+      class="summary-cards-grid gap-5 pb-12">
 
       <!-- <SummaryCard :title="showTotalHours ? '平均总工时' : '平均工时'" type="single" color="green" :icon="IconChart"
         :data="{ value: footerStats.avgAll, unit: '小时', subtitle: '' }" /> -->
 
       <SummaryCard title="总工时投入" type="double-list" :limit="6" color="green" :icon="IconChart"
-        :data="{ top: footerStats.topHours, bottom: footerStats.bottomHours }" />
+        :data="{ top: footerStats.topTotalHours, bottom: footerStats.bottomTotalHours, avg: footerStats.avgTotalHours, monthCount: monthKeys.length }" />
 
-      <SummaryCard title="平均工时投入" type="list" color="blue" :limit="6" :icon="IconTrendUp" :data="footerStats.avgHoursRanking" />
+      <SummaryCard title="日均工时投入" type="double-list" color="blue" :limit="6" :icon="IconTrendUp"
+        :data="{ top: footerStats.topDailyHours, bottom: footerStats.bottomDailyHours, avg: footerStats.avgDailyHours, monthCount: monthKeys.length }" />
 
       <SummaryCard title="补卡次数" type="list" color="orange" :limit="6" :icon="IconFileText"
         :data="footerStats.topMissing" />
@@ -716,3 +846,10 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.summary-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+</style>
