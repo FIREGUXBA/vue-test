@@ -155,7 +155,7 @@ const doubleListData = computed(() => {
         <span class="text-[10px] text-gray-500 font-medium"
           :class="!showSum ? 'text-gray-700' : 'text-gray-400'">{{doubleListData.monthCount }}个月平均</span>
         <button @click="showSum = !showSum"
-          class="relative inline-flex items-center justify-between h-5 w-9 px-0.5 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-1"
+          class="relative inline-flex items-center justify-between h-5 w-9 px-0.5 rounded-full transition-colors duration-300 focus:outline-none "
           :class="showSum ? theme.bg : 'bg-gray-300'">
           <span
             class="absolute inline-block h-4 w-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 z-10"

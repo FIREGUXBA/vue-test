@@ -135,7 +135,10 @@ const getCurrentConfig = async () => {
       OVER_WRITE: config.OVER_WRITE
     }
   } catch (error) {
+    showToast('获取当前配置失败', 'error')
     console.error('获取当前配置失败:', error)
+  } finally {
+    showToast('获取当前配置成功', 'success')
   }
 }
 

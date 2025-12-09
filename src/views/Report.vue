@@ -160,7 +160,7 @@ const handleQuery = async () => {
     if (departmentInput.value.trim()) {
       params.department = departmentInput.value.trim()
     }
-    showToast('查询中...', 'pending')
+    // showToast('查询中...', 'pending')
     const result = await queryReportData(params)
     data.value = normalizeData(result)
     hasSearched.value = true
@@ -667,7 +667,7 @@ onUnmounted(() => {
           class="flex items-center px-5 h-[34px] rounded-lg text-[13px] font-medium transition-all duration-300 border relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
           :class="loading || !isMonthRangeValid
             ? 'bg-gray-100 text-gray-400 border-gray-200'
-            : 'bg-[#007AFF] hover:bg-[#0062CC] text-white border-[#007AFF] hover:shadow-md'">
+            : 'bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:shadow-md'">
           <svg v-if="loading" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none"
             viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -677,19 +677,6 @@ onUnmounted(() => {
           </svg>
           <span v-else>查询</span>
         </button>
-
-        <!-- <div v-if="hasSearched"
-          class="flex items-center gap-2 px-3 h-[34px] rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-all duration-300 group">
-          <div
-            class="bg-gray-100 p-1.5 rounded-lg text-gray-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all duration-300">
-            <IconUsers class="w-3 h-3"></IconUsers>
-          </div>
-          <span
-            class="text-[13px] font-semibold text-gray-800 group-hover:text-blue-700 transition-colors duration-300">{{
-              data.length }} 人</span>
-        </div> -->
-
-        <!-- <div class="h-[34px] w-px bg-gray-200 transition-opacity duration-300"></div> -->
 
         <!-- 工时显示模式切换 -->
         <div class="flex items-center h-[34px]">

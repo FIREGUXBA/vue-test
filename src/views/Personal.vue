@@ -125,7 +125,6 @@ const fetchPersonalData = async (year = null) => {
       end_month: endMonth,
       employee_id: employeeId
     })
-
     // 转换数据格式（合并到现有数据中，而不是替换）
     const newData = transformApiData(result)
 
@@ -157,6 +156,7 @@ const fetchPersonalData = async (year = null) => {
     }
   } finally {
     loading.value = false
+    showToast('获取个人工时数据成功', 'success')
   }
 }
 
