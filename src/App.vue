@@ -4,7 +4,6 @@ import { useRoute } from 'vue-router'
 import IconChart from './components/icons/IconChart.vue'
 import IconTable from './components/icons/IconTable.vue'
 import IconSave from './components/icons/IconSave.vue'
-import { generateData } from './utils/data'
 import { getUserInfo, initUserInfoFromURL, isAdmin } from './utils/user'
 import ToastNotification from './components/ToastNotification.vue'
 const currentRoute = useRoute()
@@ -51,9 +50,6 @@ watch(userInfo, () => {
   userIsAdmin.value = isAdmin()
 }, { deep: true })
 
-const data = ref(generateData())
-const filterDept = ref('全部')
-const searchTerm = ref('')
 const toastState = ref({
   show: false,
   message: '',
@@ -65,7 +61,7 @@ let toastTimer = null
 const showToast = (message, type = 'success') => {
   // 如果已有 Toast，先快速关闭再显示新的（可选，这里直接覆盖）
   if (toastTimer) clearTimeout(toastTimer)
-  
+
   // 先设置为 false，然后立即设置为 true，确保 watch 能够触发
   toastState.value.show = false
   // 使用 nextTick 确保在下一个 tick 设置，触发 watch
@@ -92,12 +88,6 @@ const handleAvatarError = (event) => {
 }
 
 provide('showToast', showToast)
-// 通过 provide 共享数据给子组件
-provide('filterDept', filterDept)
-provide('searchTerm', searchTerm)
-provide('data', data)
-
-const departments = computed(() => ['全部', ...new Set(data.value.map(i => i.dept))])
 
 const currentView = computed(() => {
   if (currentRoute.path === '/personal') return 'personal'
