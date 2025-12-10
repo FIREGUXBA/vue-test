@@ -72,6 +72,17 @@ const theme = computed(() => {
       shadow2: 'shadow-purple-500/20',
       shadow3: 'shadow-purple-400/15'
     },
+    indigo: {
+      bg: 'bg-indigo-500',
+      light: 'bg-indigo-50',
+      text: 'text-indigo-600',
+      badge1: 'from-indigo-600 to-indigo-500',
+      badge2: 'from-indigo-500 to-indigo-400',
+      badge3: 'from-indigo-400 to-indigo-300',
+      shadow1: 'shadow-indigo-600/30',
+      shadow2: 'shadow-indigo-500/20',
+      shadow3: 'shadow-indigo-400/15'
+    },
   }
   return colors[props.color] || colors.blue
 })

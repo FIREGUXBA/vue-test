@@ -830,7 +830,7 @@ onUnmounted(() => {
       <SummaryCard title="补卡次数" type="list" color="orange" :limit="6" :icon="IconFileText"
         :data="footerStats.topMissing" />
 
-      <SummaryCard title="调休天数" type="list" color="purple" :limit="6" :icon="IconClock" :data="footerStats.topCompLeave" />
+      <SummaryCard title="调休天数" type="list" color="indigo" :limit="6" :icon="IconClock" :data="footerStats.topCompLeave" />
 
       <SummaryCard title="请假天数" type="list" color="purple" :limit="6" :icon="IconCalendar"
         :data="footerStats.topLeave" />
