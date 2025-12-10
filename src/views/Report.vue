@@ -82,13 +82,13 @@ const normalizeData = (apiData) => {
 
     // 直接使用 period 作为月份键
     const monthKey = item.period
-    employeeMap[employeeId].monthlyHours[monthKey] = parseFloat((item.avg_work_hours_no_weekend_exclude_card_fix || 0).toFixed(2))
-    employeeMap[employeeId].monthlyTotalHours[monthKey] = parseFloat((item.total_work_hours_with_weekend_exclude_card_fix || 0).toFixed(2))
+    employeeMap[employeeId].monthlyHours[monthKey] = parseFloat((item.normal_total_avg_work_hours || 0).toFixed(2))
+    employeeMap[employeeId].monthlyTotalHours[monthKey] = parseFloat((item.total_work_hours || 0).toFixed(2))
     // 累计统计数据（补卡、迟到等应该累计）
     const stats = employeeMap[employeeId].stats
     stats.missingCard = parseFloat((stats.missingCard + (item.card_fix_count || 0)).toFixed(2))
-    stats.businessTrip = parseFloat((stats.businessTrip + (item.business_trip_days || 0)).toFixed(2))
-    stats.compLeave = parseFloat((stats.compLeave + (item.compensatory_leave_days || 0)).toFixed(2))
+    stats.businessTrip = parseFloat((stats.businessTrip + (item.workday_trip_count || 0)).toFixed(2))
+    stats.compLeave = parseFloat((stats.compLeave + (item.compensatory_leave_count || 0)).toFixed(2))
     stats.leave = parseFloat((stats.leave + (item.leave_days || 0)).toFixed(2))
     stats.late = parseFloat((stats.late + (item.late_count || 0)).toFixed(2))
     stats.earlyLeave = parseFloat((stats.earlyLeave + (item.early_leave_count || 0)).toFixed(2))
@@ -160,7 +160,6 @@ const handleQuery = async () => {
     if (departmentInput.value.trim()) {
       params.department = departmentInput.value.trim()
     }
-    // showToast('查询中...', 'pending')
     const result = await queryReportData(params)
     data.value = normalizeData(result)
     hasSearched.value = true
@@ -206,6 +205,7 @@ const footerStats = computed(() => {
       bottomDailyHours: [],
       topDailyHoursAvgByMonth: [],
       bottomDailyHoursAvgByMonth: [],
+      topCompLeave: [],
       topMissing: [],
       topLeave: [],
       topLate: []
@@ -239,9 +239,9 @@ const footerStats = computed(() => {
     const monthValues = currentData
       .map(emp => emp.monthlyTotalHours[month])
       .filter(val => val !== undefined && val !== null)
-    
+
     if (monthValues.length === 0) return { month, value: 0, unit: 'h' }
-    
+
     const avg = monthValues.reduce((sum, val) => sum + val, 0) / monthValues.length
     return {
       month,
@@ -278,13 +278,13 @@ const footerStats = computed(() => {
       .map(d => ({ ...d, totalHoursSum: getTotalHoursSum(d) }))
       .sort((a, b) => b.totalHoursSum - a.totalHoursSum)
       .slice(0, 6)
-    
+
     const monthValues = topEmployees
       .map(emp => emp.monthlyTotalHours[month])
       .filter(val => val !== undefined && val !== null)
-    
+
     if (monthValues.length === 0) return { month, value: 0, unit: 'h' }
-    
+
     const avg = monthValues.reduce((sum, val) => sum + val, 0) / monthValues.length
     return {
       month,
@@ -299,13 +299,13 @@ const footerStats = computed(() => {
       .map(d => ({ ...d, totalHoursSum: getTotalHoursSum(d) }))
       .sort((a, b) => a.totalHoursSum - b.totalHoursSum)
       .slice(0, 6)
-    
+
     const monthValues = bottomEmployees
       .map(emp => emp.monthlyTotalHours[month])
       .filter(val => val !== undefined && val !== null)
-    
+
     if (monthValues.length === 0) return { month, value: 0, unit: 'h' }
-    
+
     const avg = monthValues.reduce((sum, val) => sum + val, 0) / monthValues.length
     return {
       month,
@@ -337,9 +337,9 @@ const footerStats = computed(() => {
     const monthValues = currentData
       .map(emp => emp.monthlyHours[month])
       .filter(val => val !== undefined && val !== null)
-    
+
     if (monthValues.length === 0) return { month, value: 0, unit: 'h' }
-    
+
     const avg = monthValues.reduce((sum, val) => sum + val, 0) / monthValues.length
     return {
       month,
@@ -376,13 +376,13 @@ const footerStats = computed(() => {
       .map(d => ({ ...d, dailyHoursSum: getDailyHoursSum(d) }))
       .sort((a, b) => b.dailyHoursSum - a.dailyHoursSum)
       .slice(0, 6)
-    
+
     const monthValues = topEmployees
       .map(emp => emp.monthlyHours[month])
       .filter(val => val !== undefined && val !== null)
-    
+
     if (monthValues.length === 0) return { month, value: 0, unit: 'h' }
-    
+
     const avg = monthValues.reduce((sum, val) => sum + val, 0) / monthValues.length
     return {
       month,
@@ -397,13 +397,13 @@ const footerStats = computed(() => {
       .map(d => ({ ...d, dailyHoursSum: getDailyHoursSum(d) }))
       .sort((a, b) => a.dailyHoursSum - b.dailyHoursSum)
       .slice(0, 6)
-    
+
     const monthValues = bottomEmployees
       .map(emp => emp.monthlyHours[month])
       .filter(val => val !== undefined && val !== null)
-    
+
     if (monthValues.length === 0) return { month, value: 0, unit: 'h' }
-    
+
     const avg = monthValues.reduce((sum, val) => sum + val, 0) / monthValues.length
     return {
       month,
@@ -431,6 +431,12 @@ const footerStats = computed(() => {
     .slice(0, 6)
     .map(i => ({ name: i.name, dept: i.dept, value: i.stats.leave, unit: '天' }))
 
+  const topCompLeave = [...currentData]
+    .sort((a, b) => b.stats.compLeave - a.stats.compLeave)
+    .filter(i => i.stats.compLeave > 0)
+    .slice(0, 6)
+    .map(i => ({ name: i.name, dept: i.dept, value: i.stats.compLeave, unit: '天' }))
+
   return {
     avgTotalHours: getAvgTotalHours(currentData),
     avgTotalHoursAvgByMonth: avgTotalHoursAvgByMonth,
@@ -446,7 +452,8 @@ const footerStats = computed(() => {
     bottomDailyHoursAvgByMonth: bottomDailyHoursAvgByMonth,
     topMissing: topMissing,
     topLeave: topLeave,
-    topLate: topLate
+    topLate: topLate,
+    topCompLeave: topCompLeave
   }
 })
 
@@ -681,18 +688,18 @@ onUnmounted(() => {
         <!-- 工时显示模式切换 -->
         <div class="flex items-center h-[34px]">
           <button @click="showTotalHours = !showTotalHours"
-            class="relative inline-flex items-center justify-between h-[34px] w-[88px] px-1 rounded-full transition-colors duration-300 focus:outline-none "
+            class="relative inline-flex items-center justify-between h-[34px] w-[88px] px-1 rounded-lg transition-colors duration-300 focus:outline-none "
             :class="showTotalHours ? 'bg-violet-500' : 'bg-blue-500'">
             <span class="absolute left-3 text-[12px] font-medium transition-colors duration-300 z-10"
               :class="showTotalHours ? 'text-white' : 'text-gray-700/0'">
               总工时
             </span>
             <span
-              class="absolute inline-block h-[26px] w-[26px] bg-white rounded-full shadow-md transform transition-transform duration-300 z-20"
+              class="absolute inline-block h-[26px] w-[26px] bg-white rounded-md shadow-md transform transition-transform duration-300 z-20"
               :class="showTotalHours ? 'translate-x-[54px]' : 'translate-x-[0px]'" </span>
               <span class="absolute right-1.5 text-[12px] font-medium transition-colors duration-300 z-10"
                 :class="showTotalHours ? 'text-white/0' : 'text-white'">
-                平均工时
+                日均工时
               </span>
           </button>
         </div>
@@ -745,7 +752,7 @@ onUnmounted(() => {
                 class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center min-w-[90px]">
                 <div class="flex flex-col">
                   <span class="text-gray-800">{{ m }}</span>
-                  <span class="text-[9px] font-normal text-gray-400 mt-0.5">{{ showTotalHours ? '总工时' : '平均工时' }}</span>
+                  <span class="text-[9px] font-normal text-gray-400 mt-0.5">{{ showTotalHours ? '总工时' : '日均工时' }}</span>
                 </div>
               </th>
               <th
@@ -809,8 +816,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 统计卡片（仅在查询后显示） -->
-    <div v-if="hasSearched && !loading && data.length > 0"
-      class="summary-cards-grid gap-5 pb-12">
+    <div v-if="hasSearched && !loading && data.length > 0" class="summary-cards-grid gap-5 pb-12">
 
       <!-- <SummaryCard :title="showTotalHours ? '平均总工时' : '平均工时'" type="single" color="green" :icon="IconChart"
         :data="{ value: footerStats.avgAll, unit: '小时', subtitle: '' }" /> -->
@@ -824,10 +830,11 @@ onUnmounted(() => {
       <SummaryCard title="补卡次数" type="list" color="orange" :limit="6" :icon="IconFileText"
         :data="footerStats.topMissing" />
 
-      <SummaryCard title="迟到次数" type="list" color="red" :limit="6" :icon="IconClock" :data="footerStats.topLate" />
+      <SummaryCard title="调休天数" type="list" color="purple" :limit="6" :icon="IconClock" :data="footerStats.topCompLeave" />
 
       <SummaryCard title="请假天数" type="list" color="purple" :limit="6" :icon="IconCalendar"
         :data="footerStats.topLeave" />
+      <SummaryCard title="迟到次数" type="list" color="red" :limit="6" :icon="IconClock" :data="footerStats.topLate" />
 
     </div>
   </div>

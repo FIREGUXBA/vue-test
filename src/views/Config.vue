@@ -134,11 +134,12 @@ const getCurrentConfig = async () => {
       SAVE_TO_DATABASE: config.SAVE_TO_DATABASE,
       OVER_WRITE: config.OVER_WRITE
     }
+    showToast('获取当前配置成功', 'success')
   } catch (error) {
     showToast('获取当前配置失败', 'error')
     console.error('获取当前配置失败:', error)
   } finally {
-    showToast('获取当前配置成功', 'success')
+    
   }
 }
 
@@ -606,7 +607,7 @@ onUnmounted(() => {
       </div>
       
       <!-- Item 4 -->
-      <div
+      <!-- <div
         class="group p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
         <div class="flex items-center gap-3">
           <div class="w-8 h-8 rounded-lg bg-[#34C759] flex items-center justify-center text-white shadow-sm">
@@ -619,7 +620,7 @@ onUnmounted(() => {
             class="w-20 text-right bg-gray-200/50 hover:bg-gray-200 text-gray-700 text-[13px] rounded-lg px-3 py-1.5 border border-transparent focus:bg-white focus:border-green-500/30 focus:ring-2 focus:ring-green-500/20 transition-all outline-none" />
           <span class="text-[13px] text-gray-400">天</span>
         </div>
-      </div>
+      </div> -->
 
     </div>
 

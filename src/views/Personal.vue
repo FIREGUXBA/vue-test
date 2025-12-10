@@ -7,7 +7,7 @@ import IconCalendarDays from '../components/icons/IconCalendarDays.vue'
 import IconTrendUp from '../components/icons/IconTrendUp.vue'
 import IconChevronRight from '../components/icons/IconChevronRight.vue'
 import IconFileText from '../components/icons/IconFileText.vue'
-import { queryPersonalData, getAvgTotalWorkHoursByMonth, getAvgWorkHoursNoWeekendByMonth } from '../utils/api/modules/personal'
+import { queryPersonalData, getTotalworkhoursAvgbyall, getNormalTotalAvgWorkHoursAvgbyall } from '../utils/api/modules/personal'
 import { getUserInfo, getUserInfoField } from '../utils/user'
 
 // 注入全局数据和方法
@@ -42,6 +42,8 @@ const getEmployeeId = () => {
 const transformApiData = (apiDataArray) => {
   const result = {
     monthlyHours: {},
+    monthlyTotalHours: {},
+    weekendOvertimeHours: {},
     stats: {},
     employee: null
   }
@@ -54,18 +56,18 @@ const transformApiData = (apiDataArray) => {
   apiDataArray.forEach(item => {
     const month = item.period // 格式: "2025-08"
 
-    // 存储日均工时
-    result.monthlyHours[month] = item.avg_work_hours_no_weekend_exclude_card_fix || 0
-
-    // 存储该月的统计数据
+    // 存储日均工时（确保数字类型，使用??避免0值被替换）
+    result.monthlyHours[month] = Number(item.normal_total_avg_work_hours ?? 0)
+    result.monthlyTotalHours[month] = Number(item.total_work_hours ?? 0)
+    result.weekendOvertimeHours[month] = Number(item.weekend_overtime_hours ?? 0)
+    // 存储该月的统计数据（确保正确的数据类型）
     result.stats[month] = {
-      missingCard: item.card_fix_count || 0,
-      businessTrip: item.business_trip_days || 0,
-      compLeave: item.compensatory_leave_days || 0,
-      leave: item.leave_days || 0,
-      late: item.late_count || 0,
-      totalHours: item.total_work_hours_with_weekend_exclude_card_fix || 0,
-      workDays: item.standard_work_days || 0
+      missingCard: Number(item.card_fix_count ?? 0),
+      businessTrip: Number(item.workday_trip_count ?? 0),
+      compLeave: Number(item.compensatory_leave_count ?? 0),
+      leave: Number(item.leave_days ?? 0),
+      late: Number(item.late_count ?? 0),
+      workDays: Number(item.work_days ?? 0)
     }
 
     // 保存员工信息（取第一条）
@@ -134,6 +136,14 @@ const fetchPersonalData = async (year = null) => {
         ...personalData.value.monthlyHours,
         ...newData.monthlyHours
       },
+      monthlyTotalHours: {
+        ...personalData.value.monthlyTotalHours,
+        ...newData.monthlyTotalHours
+      },
+      weekendOvertimeHours: {
+        ...personalData.value.weekendOvertimeHours,
+        ...newData.weekendOvertimeHours
+      },
       stats: {
         ...personalData.value.stats,
         ...newData.stats
@@ -143,6 +153,7 @@ const fetchPersonalData = async (year = null) => {
 
     // 标记该年份已加载
     loadedYears.value.add(targetYear)
+    showToast('获取个人工时数据成功', 'success')
   } catch (error) {
     console.error('获取个人数据失败:', error)
     showToast('获取个人数据失败', 'error')
@@ -150,33 +161,18 @@ const fetchPersonalData = async (year = null) => {
     if (!personalData.value.monthlyHours || Object.keys(personalData.value.monthlyHours).length === 0) {
       personalData.value = {
         monthlyHours: {},
+        monthlyTotalHours: {},
+        weekendOvertimeHours: {},
         stats: {},
         employee: null
       }
     }
+    
   } finally {
     loading.value = false
-    showToast('获取个人工时数据成功', 'success')
+    
   }
 }
-
-// 当前用户数据（兼容原有代码结构）
-const currentUser = computed(() => {
-  const monthStats = personalData.value.stats?.[currentMonth.value] || {}
-
-  return {
-    monthlyHours: personalData.value.monthlyHours || {},
-    stats: {
-      missingCard: monthStats.missingCard || 0,
-      businessTrip: monthStats.businessTrip || 0,
-      compLeave: monthStats.compLeave || 0,
-      leave: monthStats.leave || 0,
-      late: monthStats.late || 0
-    },
-    employee: personalData.value.employee || {}
-  }
-})
-
 const allMonthKeys = computed(() => {
   if (!personalData.value.stats || Object.keys(personalData.value.stats).length === 0) {
     return []
@@ -307,7 +303,7 @@ const fetchTeamAvgHours = async (period) => {
   }
 
   try {
-    const response = await getAvgTotalWorkHoursByMonth(period)
+    const response = await getTotalworkhoursAvgbyall(period)
     // 返回对象 {"period": "2025-07", "average_value": 217.62217391304347, "employee_count": 23}
     const avgHours = response.average_value
     teamAvgHours.value[period] = avgHours
@@ -326,7 +322,7 @@ const fetchTeamAvgDailyHours = async (period) => {
   }
 
   try {
-    const response = await getAvgWorkHoursNoWeekendByMonth(period)
+    const response = await getNormalTotalAvgWorkHoursAvgbyall(period)
     // 返回对象 {"period": "2025-07", "average_value": 9.5, "employee_count": 23}
     const avgDailyHours = response.average_value
     teamAvgDailyHours.value[period] = avgDailyHours
@@ -341,11 +337,13 @@ const fetchTeamAvgDailyHours = async (period) => {
 const monthData = computed(() => {
   // 从API数据中获取当前月份的数据
   const monthStats = personalData.value.stats?.[currentMonth.value] || {}
-  const avgDaily = currentUser.value.monthlyHours?.[currentMonth.value] || 0
+  const avgDaily = personalData.value.monthlyHours?.[currentMonth.value] || 0
   // API返回的total_work_hours已经是总工时，不需要再乘以天数
-  const totalHours = monthStats.totalHours 
+  const totalHours = personalData.value.monthlyTotalHours?.[currentMonth.value] || 0
+  // 获取周末加班时长
+  const weekendOvertimeHours = personalData.value.weekendOvertimeHours?.[currentMonth.value] || 0
   const standardTotalHours = STANDARD_DAILY_HOURS * monthStats.workDays
-
+  
   // 日均工时进度
   const dailyPercent = Math.min(100, (avgDaily / 12) * 100)
   const animatedDailyPercent = isMounted.value ? dailyPercent : 0
@@ -357,19 +355,15 @@ const monthData = computed(() => {
   const animatedTotalPercent = isMounted.value ? totalPercent : 0
   const standardTotalPercent = (standardTotalHours / maxTotalHours) * 100
 
-  // 计算加班时长（总工时 - 标准工时，如果为负则显示0）
-  const overtimeHours = Math.max(0, totalHours - standardTotalHours)
 
   return {
     avgDaily: avgDaily.toFixed(2),
     totalHours: totalHours,
-    overtimeHours: overtimeHours.toFixed(1), // 加班时长，保留一位小数
-    standardDays: monthStats.workDays,
-    standardTotalHours: standardTotalHours,
+    overtimeHours: weekendOvertimeHours.toFixed(1), // 周末加班时长，保留一位小数
     teamAvgTotalHours: teamAvgHours.value[currentMonth.value] , // 团队平均值，如果未加载则使用标准工时
     teamAvgDailyHours: teamAvgDailyHours.value[currentMonth.value] , // 团队平均日均工时
     maxTotalHours: maxTotalHours,
-    stats: currentUser.value.stats || {},
+    stats: personalData.value.stats?.[currentMonth.value] || {},
     animatedDailyPercent,
     standardDailyPercent,
     animatedTotalPercent,
@@ -411,7 +405,7 @@ const monthlyTrend = computed(() => {
   if (count >= 12) {
     return allYearMonths.map(month => {
       const hasData = yearMonthsWithData.has(month)
-      const hours = hasData ? (currentUser.value.monthlyHours?.[month] || 0) : 0
+      const hours = hasData ? (personalData.value.monthlyHours?.[month] || 0) : 0
       const monthNum = parseInt(month.split('-')[1])
       const labels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
 
@@ -445,7 +439,7 @@ const monthlyTrend = computed(() => {
 
   return visibleMonths.map(month => {
     const hasData = yearMonthsWithData.has(month)
-    const hours = hasData ? (currentUser.value.monthlyHours?.[month] || 0) : 0
+    const hours = hasData ? (personalData.value.monthlyHours?.[month] || 0) : 0
     const monthNum = parseInt(month.split('-')[1])
     const labels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
 
@@ -730,7 +724,7 @@ onUnmounted(() => {
               </div>
               <div class="flex flex-row items-baseline gap-2 relative">
                 
-                <span class="text-[13px] font-semibold text-violet-500 uppercase tracking-wide ">加班</span>
+                <span class="text-[13px] font-semibold text-violet-500 uppercase tracking-wide ">周末加班</span>
                 
                 
                 <span class="text-5xl font-bold tracking-tight font-sf-display bg-gradient-to-br from-violet-500 to-violet-600 bg-clip-text text-transparent">

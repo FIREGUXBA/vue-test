@@ -19,12 +19,12 @@ export const queryPersonalData = (params) => {
   }
 
 /**
- * 查询指定月份员工总工作时长的平均值
+ * 查询指定月份所有员工总工作时长的平均值
  * @param {string} period - 月份期间，格式 YYYY-MM (例如: 2025-01)
  * @returns {Promise}
  */
-export const getAvgTotalWorkHoursByMonth = (period) => {
-  return get(`/attendance/avg-total-work-hours/${period}`)
+export const getTotalworkhoursAvgbyall = (period) => {
+  return get(`/attendance/total-work-hours-avgbyall/${period}`)
 }
 
 /**
@@ -32,6 +32,6 @@ export const getAvgTotalWorkHoursByMonth = (period) => {
  * @param {string} period - 月份期间，格式 YYYY-MM (例如: 2025-01)
  * @returns {Promise}
  */
-export const getAvgWorkHoursNoWeekendByMonth = (period) => {
-  return get(`/attendance/avg-work-hours-no-weekend/${period}`)
+export const getNormalTotalAvgWorkHoursAvgbyall = (period) => {
+  return get(`/attendance/normal_total_avg_work_hours_avgbyall/${period}`)
 }
