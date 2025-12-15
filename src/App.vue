@@ -4,11 +4,11 @@ import { useRoute } from 'vue-router'
 import IconChart from './components/icons/IconChart.vue'
 import IconTable from './components/icons/IconTable.vue'
 import IconSave from './components/icons/IconSave.vue'
-import { getUserInfo, initUserInfoFromURL, isAdmin } from './utils/user'
+import { getUserInfo, initUserInfoFromURL, isSuperAdmin } from './utils/user'
 import ToastNotification from './components/ToastNotification.vue'
 const currentRoute = useRoute()
 const userInfo = ref(getUserInfo())
-const userIsAdmin = ref(isAdmin())
+const userIsSuperAdmin = ref(isSuperAdmin())
 
 // 获取或生成随机头像种子（每次登录时生成新的随机种子）
 const getRandomAvatarSeed = () => {
@@ -38,16 +38,16 @@ onMounted(() => {
     console.log('当前用户信息:', userInfo.value)
   }
   
-  // 更新管理员状态
-  userIsAdmin.value = isAdmin()
+  // 更新超级管理员状态
+  userIsSuperAdmin.value = isSuperAdmin()
   
   // 初始化随机头像种子（每次新会话时生成）
   getRandomAvatarSeed()
 })
 
-// 监听用户信息变化，自动更新管理员状态
+// 监听用户信息变化，自动更新超级管理员状态
 watch(userInfo, () => {
-  userIsAdmin.value = isAdmin()
+  userIsSuperAdmin.value = isSuperAdmin()
 }, { deep: true })
 
 const toastState = ref({
@@ -98,14 +98,14 @@ const currentView = computed(() => {
 
 // 计算导航标签的宽度和位置（根据是否显示管理员菜单动态调整）
 const navTabStyle = computed(() => {
-  if (userIsAdmin.value) {
-    // 管理员：显示三个标签，每个占 33.33%
+  if (userIsSuperAdmin.value) {
+    // 超级管理员：显示三个标签，每个占 33.33%
     return {
       left: currentView.value === 'personal' ? '4px' : currentView.value === 'report' ? 'calc(33.33% + 2px)' : 'calc(66.66% + 2px)',
       width: 'calc(33.33% - 6px)'
     }
   } else {
-    // 非管理员：只显示个人标签，占 100%
+    // 普通用户或管理员：只显示个人标签，占 100%
     return {
       left: '4px',
       width: 'calc(100% - 8px)'
@@ -157,12 +157,12 @@ const avatarUrl = computed(() => {
               :class="currentView === 'personal' ? 'text-gray-800' : 'text-gray-500 hover:text-gray-600'">
               <IconChart class="w-3.5 h-3.5"></IconChart> 个人
             </router-link>
-            <router-link v-if="userIsAdmin" to="/report"
+            <router-link v-if="userIsSuperAdmin" to="/report"
               class="relative z-10 px-4 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-2 w-24 justify-center"
               :class="currentView === 'report' ? 'text-gray-800' : 'text-gray-500 hover:text-gray-600'">
               <IconTable class="w-3.5 h-3.5"></IconTable> 报表
             </router-link>
-            <router-link v-if="userIsAdmin" to="/config"
+            <router-link v-if="userIsSuperAdmin" to="/config"
               class="relative z-10 px-4 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-2 w-24 justify-center"
               :class="currentView === 'config' ? 'text-gray-800' : 'text-gray-500 hover:text-gray-600'">
               <IconSave class="w-3.5 h-3.5"></IconSave> 配置

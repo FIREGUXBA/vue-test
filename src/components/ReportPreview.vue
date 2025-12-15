@@ -17,42 +17,23 @@ const currentSheetIndex = ref(0)
 const tableData = ref([])
 const headers = ref([])
 
-// 获取完整URL
+// 获取文件URL（统一使用相对路径）
 const getFullUrl = () => {
   if (!props.fileUrl) return ''
   
-  // 获取 baseURL
-  const getBaseURL = () => {
-    if (import.meta.env.VITE_API_BASE_URL) {
-      return import.meta.env.VITE_API_BASE_URL
-    }
-    const host = import.meta.env.VITE_API_HOST
-    const port = import.meta.env.VITE_API_PORT
-    if (host && port) {
-      return `http://${host}:${port}/api`
-    }
-    if (host) {
-      return `http://${host}/api`
-    }
-    return '/api'
-  }
-
-  const baseURL = getBaseURL()
-  let fullUrl
+  // 统一使用相对路径，通过代理转发
+  // 如果已经是完整URL，则直接使用（用于外部链接）
   if (props.fileUrl.startsWith('http')) {
-    fullUrl = props.fileUrl
-  } else if (props.fileUrl.startsWith('/api')) {
-    if (baseURL.startsWith('http')) {
-      const urlObj = new URL(baseURL)
-      fullUrl = `${urlObj.origin}${props.fileUrl}`
-    } else {
-      fullUrl = props.fileUrl
-    }
-  } else {
-    fullUrl = `${baseURL}${props.fileUrl}`
+    return props.fileUrl
   }
   
-  return fullUrl
+  // 如果已经以 /api 开头，直接使用
+  if (props.fileUrl.startsWith('/api')) {
+    return props.fileUrl
+  }
+  
+  // 否则添加 /api 前缀
+  return `/api${props.fileUrl.startsWith('/') ? '' : '/'}${props.fileUrl}`
 }
 
 // 加载并解析Excel文件

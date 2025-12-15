@@ -72,42 +72,47 @@ export const upload = (url, formData, config = {}) => {
  * @param {object} params - 查询参数
  */
 export const download = async (url, filename, params = {}) => {
-  // 获取 baseURL
-  const getBaseURL = () => {
-    if (import.meta.env.VITE_API_BASE_URL) {
-      return import.meta.env.VITE_API_BASE_URL
-    }
-    const host = import.meta.env.VITE_API_HOST
-    const port = import.meta.env.VITE_API_PORT
-    if (host && port) {
-      return `http://${host}:${port}/api`
-    }
-    if (host) {
-      return `http://${host}/api`
-    }
-    return '/api'
-  }
-
-  // 构建完整 URL
-  const baseURL = getBaseURL()
+  const isDev = import.meta.env.DEV || import.meta.env.MODE === 'development'
+  
+  // 开发环境：使用相对路径，通过 Vite 代理转发
+  // 生产环境：使用完整 URL
   let fullUrl
-  if (url.startsWith('http')) {
-    // 完整的 HTTP URL
-    fullUrl = url
-  } else if (url.startsWith('/api')) {
-    // URL 已经包含 /api 前缀，直接使用（可能是相对路径或绝对路径）
-    // 如果 baseURL 是完整 URL，需要拼接；如果是相对路径，直接使用
-    if (baseURL.startsWith('http')) {
-      // baseURL 是完整 URL，需要提取域名部分
-      const urlObj = new URL(baseURL)
-      fullUrl = `${urlObj.origin}${url}`
+  if (isDev) {
+    // 开发环境：确保使用相对路径
+    if (url.startsWith('http')) {
+      // 如果传入的是完整 URL，提取路径部分
+      try {
+        const urlObj = new URL(url)
+        fullUrl = urlObj.pathname + urlObj.search
+      } catch (e) {
+        fullUrl = url.startsWith('/api') ? url : `/api${url}`
+      }
     } else {
-      // baseURL 是相对路径，直接使用 url
-      fullUrl = url
+      // 相对路径
+      fullUrl = url.startsWith('/api') ? url : `/api${url}`
     }
   } else {
-    // 相对路径，需要拼接 baseURL
-    fullUrl = `${baseURL}${url}`
+    // 生产环境：构建完整 URL
+    const host = import.meta.env.VITE_API_HOST
+    const port = import.meta.env.VITE_API_PORT
+    const baseURL = import.meta.env.VITE_API_BASE_URL
+    
+    let serverUrl = ''
+    if (host && port) {
+      serverUrl = `http://${host}:${port}`
+    } else if (baseURL) {
+      serverUrl = baseURL.replace(/\/api\/?$/, '')
+    } else {
+      serverUrl = 'http://localhost:9500'
+    }
+    
+    if (url.startsWith('http')) {
+      fullUrl = url
+    } else if (url.startsWith('/api')) {
+      fullUrl = `${serverUrl}${url}`
+    } else {
+      fullUrl = `${serverUrl}/api${url}`
+    }
   }
   
   // 获取 token
