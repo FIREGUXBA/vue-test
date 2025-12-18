@@ -908,9 +908,9 @@ onUnmounted(() => {
           <thead>
             <tr>
               <th
-                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/80 backdrop-blur-sm border-b border-gray-200 w-28 text-left sticky left-0 shadow-[4px_0_12px_rgba(0,0,0,0.02)] z-20">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/80 backdrop-blur-sm border-b border-gray-200 w-28 text-left sticky left-0 shadow-[4px_0_12px_rgba(0,0,0,0.02)] z-20 whitespace-nowrap">
                 <button type="button" @click="toggleSort('name')"
-                  class="group inline-flex items-center gap-1 text-left select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  class="group inline-flex items-center gap-1 text-left select-none px-2 py-1 rounded-md transition-colors duration-200 whitespace-nowrap"
                   :class="sortKey === 'name'
                     ? 'bg-blue-50 ring-1 ring-blue-200/80 text-blue-800'
                     : 'hover:bg-gray-100/70 text-gray-500'">
@@ -939,9 +939,9 @@ onUnmounted(() => {
                 </button>
               </th>
               <th
-                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 w-32 text-left">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 w-32 text-left whitespace-nowrap">
                 <button type="button" @click="toggleSort('dept')"
-                  class="group inline-flex items-center gap-1 text-left select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  class="group inline-flex items-center gap-1 text-left select-none px-2 py-1 rounded-md transition-colors duration-200 whitespace-nowrap"
                   :class="sortKey === 'dept'
                     ? 'bg-blue-50 ring-1 ring-blue-200/80 text-blue-800'
                     : 'hover:bg-gray-100/70 text-gray-500'">
@@ -970,9 +970,9 @@ onUnmounted(() => {
                 </button>
               </th>
               <th v-for="m in monthKeys" :key="m"
-                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center min-w-[90px]">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center min-w-[90px] whitespace-nowrap">
                 <button type="button" @click="toggleSort(`month:${m}`)"
-                  class="group w-full inline-flex items-center justify-center gap-1 select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  class="group w-full inline-flex items-center justify-center gap-1 select-none px-2 py-1 rounded-md transition-colors duration-200 whitespace-nowrap"
                   :class="sortKey === `month:${m}`
                     ? 'bg-blue-50 ring-1 ring-blue-200/80'
                     : 'hover:bg-gray-100/60'">
@@ -1005,9 +1005,9 @@ onUnmounted(() => {
               </th>
               <!-- 添加一列，把前面月份的工时数据相加后求平均值 -->
               <th
-                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center min-w-[90px]">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center min-w-[90px] whitespace-nowrap">
                 <button type="button" @click="toggleSort('avg')"
-                  class="group w-full inline-flex items-center justify-center gap-1 select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  class="group w-full inline-flex items-center justify-center gap-1 select-none px-2 py-1 rounded-md transition-colors duration-200 whitespace-nowrap"
                   :class="sortKey === 'avg'
                     ? 'bg-blue-50 ring-1 ring-blue-200/80'
                     : 'hover:bg-gray-100/60'">
@@ -1039,9 +1039,9 @@ onUnmounted(() => {
                 </button>
               </th>
               <th
-                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center whitespace-nowrap">
                 <button type="button" @click="toggleSort('stat:missingCard')"
-                  class="group inline-flex items-center justify-center gap-1 w-full select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  class="group inline-flex items-center justify-center gap-1 w-full select-none px-2 py-1 rounded-md transition-colors duration-200 whitespace-nowrap"
                   :class="sortKey === 'stat:missingCard'
                     ? 'bg-blue-50 ring-1 ring-blue-200/80'
                     : 'hover:bg-gray-100/60'">
@@ -1070,9 +1070,9 @@ onUnmounted(() => {
                 </button>
               </th>
               <th
-                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center whitespace-nowrap">
                 <button type="button" @click="toggleSort('stat:businessTrip')"
-                  class="group inline-flex items-center justify-center gap-1 w-full select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  class="group inline-flex items-center justify-center gap-1 w-full select-none px-2 py-1 rounded-md transition-colors duration-200 whitespace-nowrap"
                   :class="sortKey === 'stat:businessTrip'
                     ? 'bg-blue-50 ring-1 ring-blue-200/80'
                     : 'hover:bg-gray-100/60'">
@@ -1101,9 +1101,9 @@ onUnmounted(() => {
                 </button>
               </th>
               <th
-                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center whitespace-nowrap">
                 <button type="button" @click="toggleSort('stat:compLeave')"
-                  class="group inline-flex items-center justify-center gap-1 w-full select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  class="group inline-flex items-center justify-center gap-1 w-full select-none px-2 py-1 rounded-md transition-colors duration-200 whitespace-nowrap"
                   :class="sortKey === 'stat:compLeave'
                     ? 'bg-blue-50 ring-1 ring-blue-200/80'
                     : 'hover:bg-gray-100/60'">
@@ -1132,9 +1132,9 @@ onUnmounted(() => {
                 </button>
               </th>
               <th
-                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center whitespace-nowrap">
                 <button type="button" @click="toggleSort('stat:leave')"
-                  class="group inline-flex items-center justify-center gap-1 w-full select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  class="group inline-flex items-center justify-center gap-1 w-full select-none px-2 py-1 rounded-md transition-colors duration-200 whitespace-nowrap"
                   :class="sortKey === 'stat:leave'
                     ? 'bg-blue-50 ring-1 ring-blue-200/80'
                     : 'hover:bg-gray-100/60'">
@@ -1163,9 +1163,9 @@ onUnmounted(() => {
                 </button>
               </th>
               <th
-                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center">
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center whitespace-nowrap">
                 <button type="button" @click="toggleSort('stat:late')"
-                  class="group inline-flex items-center justify-center gap-1 w-full select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  class="group inline-flex items-center justify-center gap-1 w-full select-none px-2 py-1 rounded-md transition-colors duration-200 whitespace-nowrap"
                   :class="sortKey === 'stat:late'
                     ? 'bg-blue-50 ring-1 ring-blue-200/80'
                     : 'hover:bg-gray-100/60'">
