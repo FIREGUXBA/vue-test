@@ -24,6 +24,9 @@ export const getEmployees = (params) => {
 /**
  * 获取部门列表
  */
+export const getDepartments = () => {
+  return get('/dept')
+}
 
 /**
  * 查询报表数据
@@ -31,7 +34,8 @@ export const getEmployees = (params) => {
  * @param {string} params.start_month - 统计的开始月份，格式 YYYY-MM (例如: 2025-01)
  * @param {string} params.end_month - 统计的结束月份，格式 YYYY-MM (例如: 2025-03)
  * @param {Array<string>} [params.names] - 要查询的员工姓名列表（可选）
- * @param {string} [params.department] - 按部门模糊查询（可选）
+ * @param {Array<string>} [params.departments] - 部门列表（可选）
+ * @param {string} [params.department] - 按部门模糊查询（兼容旧参数，可选）
  * @returns {Promise}
  */
 export const queryReportData = (params) => {
@@ -43,6 +47,11 @@ export const queryReportData = (params) => {
   // 可选参数：姓名列表
   if (params.names && params.names.length > 0) {
     requestBody.names = params.names
+  }
+
+  // 可选参数：部门列表（新）
+  if (params.departments && params.departments.length > 0) {
+    requestBody.departments = params.departments
   }
   
   // 可选参数：部门模糊查询

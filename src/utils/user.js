@@ -337,8 +337,8 @@ export function getUserRole() {
     }
     
     // 优先检查 role 字段
-    if (userInfo.role) {
-      const role = String(userInfo.role).toLowerCase().trim()
+    if (localStorage.getItem('role')) {
+      const role = String(localStorage.getItem('role')).toLowerCase().trim()
       // 支持 'super', 'admin', 'common' 以及中文 '超级管理员', '管理员', '普通用户'
       if (role === 'super' || role === '超级管理员') {
         return 'super'
@@ -380,6 +380,7 @@ export function getUserRole() {
  */
 export function isSuperAdmin() {
   const role = getUserRole()
+  console.log('isSuperAdmin role:', role)
   return role === 'super'
 }
 
@@ -425,17 +426,22 @@ export function saveAdminJobNoInDevMode() {
     // 保存管理员工号到localStorage
     localStorage.setItem('adminJobNo', adminJobNo)
     localStorage.setItem('adminName', adminName)
-    // 同时更新用户信息中的jobNo（如果当前没有用户信息或用户信息中没有jobNo）
-    const currentUserInfo = getUserInfo()
-    if (!currentUserInfo || !currentUserInfo.jobNo || !currentUserInfo.name) {
-      const updatedUserInfo = currentUserInfo ? { ...currentUserInfo } : {}
+    // 同步更新用户信息，并在开发模式下强制设置为超级管理员
+    const currentUserInfo = getUserInfo() || {}
+    const updatedUserInfo = { ...currentUserInfo }
+
+    if (!updatedUserInfo.jobNo) {
       updatedUserInfo.jobNo = adminJobNo
-      updatedUserInfo.name = adminName
-      saveUserInfo(updatedUserInfo)
-      console.log('开发模式：已将管理员工号保存到localStorage:', adminJobNo)
-    } else {
-      console.log('开发模式：非管理员工号已存在，跳过覆盖')
     }
+    if (!updatedUserInfo.name && adminName) {
+      updatedUserInfo.name = adminName
+    }
+
+    updatedUserInfo.role = 'super'
+    updatedUserInfo.isAdmin = true
+
+    saveUserInfo(updatedUserInfo)
+    console.log('开发模式：已保存管理员工号并将角色设置为超级管理员:', updatedUserInfo)
     
     return true
   } catch (error) {

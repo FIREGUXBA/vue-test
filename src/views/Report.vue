@@ -10,7 +10,7 @@ import IconTrendUp from '../components/icons/IconTrendUp.vue'
 import IconClock from '../components/icons/IconClock.vue'
 import IconFileText from '../components/icons/IconFileText.vue'
 import { getCellColor } from '../utils/data'
-import { getEmployees, getMonthList, queryReportData } from '../utils/api/modules/report'
+import { getEmployees, getMonthList, queryReportData, getDepartments } from '../utils/api/modules/report'
 const showToast = inject('showToast')
 
 // 部门映射函数
@@ -40,7 +40,7 @@ const loadingMonthList = ref(false)
 
 // 筛选条件
 const selectedNames = ref([])
-const departmentInput = ref('') // 部门输入框（模糊查询）
+const selectedDepartments = ref([])
 const startMonth = ref('')
 const endMonth = ref('')
 
@@ -116,6 +116,7 @@ const isMonthRangeValid = computed(() => {
   return selectedMonthCount.value >= 2
 })
 const showNameDropdown = ref(false)
+const showDeptDropdown = ref(false)
 const showMonthDropdown = ref(false)
 
 // 从员工列表中获取所有姓名列表（用于下拉选择）
@@ -124,6 +125,22 @@ const allNames = computed(() => {
     return []
   }
   return [...new Set(employeeList.value.map(emp => emp.name))].sort()
+})
+
+// 部门列表（用于下拉选择）
+const departmentList = ref([])
+const loadingDepartments = ref(false)
+const allDepartments = computed(() => {
+  if (!departmentList.value || departmentList.value.length === 0) {
+    return []
+  }
+  const uniqueDepts = [...new Set(departmentList.value.map(d => d.dept_name || d))]
+  return uniqueDepts
+    .map(dept => ({
+      value: dept,
+      label: mapDepartment(dept)
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'zh-CN'))
 })
 
 // 从查询返回的数据中提取所有月份键
@@ -156,9 +173,9 @@ const handleQuery = async () => {
       params.names = selectedNames.value
     }
 
-    // 添加可选参数：部门模糊查询
-    if (departmentInput.value.trim()) {
-      params.department = departmentInput.value.trim()
+    // 添加可选参数：部门列表
+    if (selectedDepartments.value.length > 0) {
+      params.departments = selectedDepartments.value
     }
     const result = await queryReportData(params)
     data.value = normalizeData(result)
@@ -188,6 +205,26 @@ const columnValues = computed(() => {
       .filter(val => val !== undefined && val !== null)
   })
   return map
+})
+
+// 计算每行的平均值（当前展示模式下的工时）
+const rowAverages = computed(() => {
+  if (!hasSearched.value || !data.value || data.value.length === 0) {
+    return {}
+  }
+  const field = currentHoursField.value
+  return data.value.reduce((acc, row) => {
+    const values = monthKeys.value
+      .map(m => row[field][m])
+      .filter(val => val !== undefined && val !== null)
+    if (values.length === 0) {
+      acc[row.id] = null
+    } else {
+      const sum = values.reduce((s, v) => s + v, 0)
+      acc[row.id] = parseFloat((sum / values.length).toFixed(2))
+    }
+    return acc
+  }, {})
 })
 
 const footerStats = computed(() => {
@@ -476,13 +513,23 @@ watch([startMonth, endMonth], ([start, end]) => {
 const toggleNameDropdown = () => {
   const wasOpen = showNameDropdown.value
   showNameDropdown.value = false
+  showDeptDropdown.value = false
   showMonthDropdown.value = false
   showNameDropdown.value = !wasOpen
+}
+
+const toggleDeptDropdown = () => {
+  const wasOpen = showDeptDropdown.value
+  showNameDropdown.value = false
+  showDeptDropdown.value = false
+  showMonthDropdown.value = false
+  showDeptDropdown.value = !wasOpen
 }
 
 const toggleMonthDropdown = () => {
   const wasOpen = showMonthDropdown.value
   showNameDropdown.value = false
+  showDeptDropdown.value = false
   showMonthDropdown.value = false
   showMonthDropdown.value = !wasOpen
 }
@@ -490,6 +537,7 @@ const toggleMonthDropdown = () => {
 const handleClickOutside = (event) => {
   if (!event.target.closest('.dropdown-container')) {
     showNameDropdown.value = false
+    showDeptDropdown.value = false
     showMonthDropdown.value = false
   }
 }
@@ -507,6 +555,21 @@ const fetchEmployeeList = async () => {
     employeeList.value = []
   } finally {
     loadingEmployees.value = false
+  }
+}
+
+// 获取部门列表
+const fetchDepartmentList = async () => {
+  loadingDepartments.value = true
+  try {
+    const result = await getDepartments()
+    departmentList.value = Array.isArray(result) ? result : []
+  } catch (err) {
+    console.error('获取部门列表失败:', err)
+    showToast('获取部门列表失败', 'error')
+    departmentList.value = []
+  } finally {
+    loadingDepartments.value = false
   }
 }
 
@@ -585,15 +648,48 @@ onUnmounted(() => {
           </transition>
         </div>
 
-        <!-- 部门输入框（模糊查询） -->
-        <div class="relative">
-          <div
-            class="flex items-center gap-2 px-3 h-[34px] rounded-lg text-[13px] font-medium transition-all duration-300 border bg-gray-200/50 hover:bg-gray-200 text-gray-700 border-transparent hover:border-blue-500/30 hover:shadow-sm">
-            <IconFilter class="w-4 h-4 text-gray-500"></IconFilter>
-            <input v-model="departmentInput" type="text" placeholder="部门（模糊查询）"
-              class="flex-1 outline-none bg-transparent text-[13px] text-gray-700 placeholder-gray-400 min-w-[120px]"
-              @keyup.enter="handleQuery" />
-          </div>
+        <!-- 选择部门 -->
+        <div class="relative dropdown-container">
+          <button @click.stop="toggleDeptDropdown(); fetchDepartmentList()"
+            class="flex items-center gap-2 px-3 h-[34px] rounded-lg text-[13px] font-medium transition-all duration-300 border relative overflow-hidden group"
+            :class="showDeptDropdown || selectedDepartments.length > 0
+              ? 'bg-blue-50 hover:bg-blue-50 text-blue-700 border-blue-300 shadow-sm'
+              : 'bg-gray-200/50 hover:bg-gray-200 text-gray-700 border-transparent hover:border-blue-500/30 hover:shadow-sm'">
+            <IconFilter class="w-4 h-4 transition-colors duration-300"
+              :class="showDeptDropdown || selectedDepartments.length > 0 ? 'text-blue-600' : 'text-gray-500'">
+            </IconFilter>
+            <span>部门</span>
+            <IconChevronRight class="w-3 h-3 transition-all duration-300"
+              :class="showDeptDropdown ? 'rotate-90 text-blue-600' : 'text-gray-400'"></IconChevronRight>
+          </button>
+          <transition name="dropdown">
+            <div v-if="showDeptDropdown" @click.stop
+              class="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl border border-gray-200 shadow-lg z-[100] max-h-80 overflow-y-auto custom-scrollbar">
+              <div class="p-2">
+                <div class="flex items-center justify-between p-2 border-b border-gray-100">
+                  <span class="text-xs font-semibold text-gray-500">选择部门</span>
+                  <button @click.stop="selectedDepartments = []"
+                    class="text-xs text-blue-500 hover:text-blue-600 font-medium transition-colors duration-200 px-2 py-1 rounded-md hover:bg-blue-50">清空</button>
+                </div>
+                <div class="p-2 space-y-1">
+                  <div v-if="loadingDepartments" class="p-4 text-center text-xs text-gray-400">
+                    正在加载部门列表...
+                  </div>
+                  <div v-else-if="allDepartments.length === 0" class="p-4 text-center text-xs text-gray-400">
+                    暂无部门数据
+                  </div>
+                  <label v-else v-for="dept in allDepartments" :key="dept.value"
+                    class="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50/50 cursor-pointer transition-all duration-200 group/item">
+                    <input type="checkbox" :value="dept.value" v-model="selectedDepartments" @click.stop
+                      class="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-0 transition-all duration-200 cursor-pointer" />
+                    <span class="text-sm text-gray-700 group-hover/item:text-blue-700 transition-colors duration-200">
+                      {{ dept.label }}
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </transition>
         </div>
 
         <!-- 选择月份范围 -->
@@ -755,6 +851,14 @@ onUnmounted(() => {
                   <span class="text-[9px] font-normal text-gray-400 mt-0.5">{{ showTotalHours ? '总工时' : '日均工时' }}</span>
                 </div>
               </th>
+              <!-- 添加一列，把前面月份的工时数据相加后求平均值 -->
+              <th
+                class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center min-w-[90px]">
+                <div class="flex flex-col">
+                  <span class="text-gray-800">平均</span>
+                  <span class="text-[9px] font-normal text-gray-400 mt-0.5">{{ showTotalHours ? '总工时' : '日均工时' }}</span>
+                </div>
+              </th>
               <th
                 class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center">
                 补卡</th>
@@ -785,6 +889,13 @@ onUnmounted(() => {
                 <div v-if="row[currentHoursField][m] !== undefined && row[currentHoursField][m] !== null"
                   class="py-1 rounded text-[12px]" :class="getCellColor(row[currentHoursField][m], columnValues[m])">{{
                     row[currentHoursField][m].toFixed(2) }}</div>
+                <div v-else class="py-1 rounded text-[12px] text-gray-400">-</div>
+              </td>
+              <td class="px-4 py-3 text-[13px] text-gray-700 border-b border-gray-100 whitespace-nowrap text-center">
+                <div v-if="rowAverages[row.id] !== null && rowAverages[row.id] !== undefined"
+                  class="py-1 rounded text-[12px]">
+                  {{ rowAverages[row.id].toFixed(2) }}
+                </div>
                 <div v-else class="py-1 rounded text-[12px] text-gray-400">-</div>
               </td>
               <td class="px-4 py-3 text-[13px] text-gray-600 border-b border-gray-100 whitespace-nowrap text-center">{{
