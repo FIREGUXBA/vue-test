@@ -47,6 +47,30 @@ const endMonth = ref('')
 // 工时显示模式切换：true 显示总工时，false 显示平均工时
 const showTotalHours = ref(false)
 
+// 排序：key 约定
+// - 'name' | 'dept'
+// - 'month:<YYYY-MM>'（按当前模式 showTotalHours 对应列排序）
+// - 'avg'（按当前模式的平均列）
+// - 'stat:<field>'，field 为 stats 下的字段名
+const sortKey = ref('') // '' 表示不排序
+const sortOrder = ref('asc') // 'asc' | 'desc'
+
+const toggleSort = (key) => {
+  if (!key) return
+  if (sortKey.value !== key) {
+    sortKey.value = key
+    sortOrder.value = 'asc'
+    return
+  }
+  // 同列切换：asc -> desc -> none
+  if (sortOrder.value === 'asc') {
+    sortOrder.value = 'desc'
+  } else {
+    sortKey.value = ''
+    sortOrder.value = 'asc'
+  }
+}
+
 // 从 API 返回的数据格式转换为内部格式
 const normalizeData = (apiData) => {
   if (!Array.isArray(apiData) || apiData.length === 0) {
@@ -225,6 +249,51 @@ const rowAverages = computed(() => {
     }
     return acc
   }, {})
+})
+
+const sortedData = computed(() => {
+  if (!hasSearched.value || !Array.isArray(data.value) || data.value.length === 0) return []
+  if (!sortKey.value) return data.value
+
+  const dir = sortOrder.value === 'asc' ? 1 : -1
+
+  const getVal = (row) => {
+    const key = sortKey.value
+    if (key === 'name') return row.name || ''
+    if (key === 'dept') return row.dept || ''
+    if (key === 'avg') return rowAverages.value?.[row.id]
+    if (key.startsWith('month:')) {
+      const m = key.slice('month:'.length)
+      const field = currentHoursField.value
+      return row?.[field]?.[m]
+    }
+    if (key.startsWith('stat:')) {
+      const f = key.slice('stat:'.length)
+      return row?.stats?.[f]
+    }
+    return undefined
+  }
+
+  const compare = (a, b) => {
+    const va = getVal(a)
+    const vb = getVal(b)
+
+    const aNil = va === undefined || va === null || Number.isNaN(va)
+    const bNil = vb === undefined || vb === null || Number.isNaN(vb)
+    if (aNil && bNil) return 0
+    if (aNil) return 1 // 空值永远排到后面
+    if (bNil) return -1
+
+    // 数字优先
+    if (typeof va === 'number' && typeof vb === 'number') {
+      return (va - vb) * dir
+    }
+
+    // 其余按字符串（中文排序友好）
+    return String(va).localeCompare(String(vb), 'zh-CN') * dir
+  }
+
+  return [...data.value].sort(compare)
 })
 
 const footerStats = computed(() => {
@@ -840,44 +909,294 @@ onUnmounted(() => {
             <tr>
               <th
                 class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/80 backdrop-blur-sm border-b border-gray-200 w-28 text-left sticky left-0 shadow-[4px_0_12px_rgba(0,0,0,0.02)] z-20">
-                姓名</th>
+                <button type="button" @click="toggleSort('name')"
+                  class="group inline-flex items-center gap-1 text-left select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  :class="sortKey === 'name'
+                    ? 'bg-blue-50 ring-1 ring-blue-200/80 text-blue-800'
+                    : 'hover:bg-gray-100/70 text-gray-500'">
+                  <span class="text-gray-800">姓名</span>
+                  <span
+                    class="inline-flex flex-col -space-y-1 opacity-70 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === 'name' && sortOrder === 'asc'
+                        ? 'text-blue-800 opacity-100 scale-125 drop-shadow-[0_0_10px_rgba(37,99,235,0.75)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 5a1 1 0 01.707.293l4 4a1 1 0 11-1.414 1.414L10 7.414 6.707 10.707A1 1 0 115.293 9.293l4-4A1 1 0 0110 5z"
+                        clip-rule="evenodd" />
+                    </svg>
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === 'name' && sortOrder === 'desc'
+                        ? 'text-blue-800 opacity-100 scale-125 drop-shadow-[0_0_10px_rgba(37,99,235,0.75)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 15a1 1 0 01-.707-.293l-4-4a1 1 0 011.414-1.414L10 12.586l3.293-3.293a1 1 0 111.414 1.414l-4 4A1 1 0 0110 15z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </span>
+                </button>
+              </th>
               <th
                 class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 w-32 text-left">
-                所属团队</th>
+                <button type="button" @click="toggleSort('dept')"
+                  class="group inline-flex items-center gap-1 text-left select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  :class="sortKey === 'dept'
+                    ? 'bg-blue-50 ring-1 ring-blue-200/80 text-blue-800'
+                    : 'hover:bg-gray-100/70 text-gray-500'">
+                  <span class="text-gray-800">所属团队</span>
+                  <span
+                    class="inline-flex flex-col -space-y-1 opacity-70 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === 'dept' && sortOrder === 'asc'
+                        ? 'text-blue-800 opacity-100 scale-125 drop-shadow-[0_0_10px_rgba(37,99,235,0.75)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 5a1 1 0 01.707.293l4 4a1 1 0 11-1.414 1.414L10 7.414 6.707 10.707A1 1 0 115.293 9.293l4-4A1 1 0 0110 5z"
+                        clip-rule="evenodd" />
+                    </svg>
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === 'dept' && sortOrder === 'desc'
+                        ? 'text-blue-800 opacity-100 scale-125 drop-shadow-[0_0_10px_rgba(37,99,235,0.75)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 15a1 1 0 01-.707-.293l-4-4a1 1 0 011.414-1.414L10 12.586l3.293-3.293a1 1 0 111.414 1.414l-4 4A1 1 0 0110 15z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </span>
+                </button>
+              </th>
               <th v-for="m in monthKeys" :key="m"
                 class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center min-w-[90px]">
-                <div class="flex flex-col">
-                  <span class="text-gray-800">{{ m }}</span>
-                  <span class="text-[9px] font-normal text-gray-400 mt-0.5">{{ showTotalHours ? '总工时' : '日均工时' }}</span>
-                </div>
+                <button type="button" @click="toggleSort(`month:${m}`)"
+                  class="group w-full inline-flex items-center justify-center gap-1 select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  :class="sortKey === `month:${m}`
+                    ? 'bg-blue-50 ring-1 ring-blue-200/80'
+                    : 'hover:bg-gray-100/60'">
+                  <div class="flex flex-col items-center">
+                    <span class="text-gray-800">{{ m }}</span>
+                    <span class="text-[9px] font-normal text-gray-400 mt-0.5">{{ showTotalHours ? '总工时' : '日均工时' }}</span>
+                  </div>
+                  <span
+                    class="inline-flex flex-col -space-y-1 opacity-70 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === `month:${m}` && sortOrder === 'asc'
+                        ? 'text-blue-800 opacity-100 scale-125 drop-shadow-[0_0_10px_rgba(37,99,235,0.75)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 5a1 1 0 01.707.293l4 4a1 1 0 11-1.414 1.414L10 7.414 6.707 10.707A1 1 0 115.293 9.293l4-4A1 1 0 0110 5z"
+                        clip-rule="evenodd" />
+                    </svg>
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === `month:${m}` && sortOrder === 'desc'
+                        ? 'text-blue-800 opacity-100 scale-125 drop-shadow-[0_0_10px_rgba(37,99,235,0.75)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 15a1 1 0 01-.707-.293l-4-4a1 1 0 011.414-1.414L10 12.586l3.293-3.293a1 1 0 111.414 1.414l-4 4A1 1 0 0110 15z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </span>
+                </button>
               </th>
               <!-- 添加一列，把前面月份的工时数据相加后求平均值 -->
               <th
                 class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center min-w-[90px]">
-                <div class="flex flex-col">
-                  <span class="text-gray-800">平均</span>
-                  <span class="text-[9px] font-normal text-gray-400 mt-0.5">{{ showTotalHours ? '总工时' : '日均工时' }}</span>
-                </div>
+                <button type="button" @click="toggleSort('avg')"
+                  class="group w-full inline-flex items-center justify-center gap-1 select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  :class="sortKey === 'avg'
+                    ? 'bg-blue-50 ring-1 ring-blue-200/80'
+                    : 'hover:bg-gray-100/60'">
+                  <div class="flex flex-col items-center">
+                    <span class="text-gray-800">平均</span>
+                    <span class="text-[9px] font-normal text-gray-400 mt-0.5">{{ showTotalHours ? '总工时' : '日均工时' }}</span>
+                  </div>
+                  <span
+                    class="inline-flex flex-col -space-y-1 opacity-70 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === 'avg' && sortOrder === 'asc'
+                        ? 'text-blue-800 opacity-100 scale-125 drop-shadow-[0_0_10px_rgba(37,99,235,0.75)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 5a1 1 0 01.707.293l4 4a1 1 0 11-1.414 1.414L10 7.414 6.707 10.707A1 1 0 115.293 9.293l4-4A1 1 0 0110 5z"
+                        clip-rule="evenodd" />
+                    </svg>
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === 'avg' && sortOrder === 'desc'
+                        ? 'text-blue-800 opacity-100 scale-125 drop-shadow-[0_0_10px_rgba(37,99,235,0.75)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 15a1 1 0 01-.707-.293l-4-4a1 1 0 011.414-1.414L10 12.586l3.293-3.293a1 1 0 111.414 1.414l-4 4A1 1 0 0110 15z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </span>
+                </button>
               </th>
               <th
                 class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center">
-                补卡</th>
+                <button type="button" @click="toggleSort('stat:missingCard')"
+                  class="group inline-flex items-center justify-center gap-1 w-full select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  :class="sortKey === 'stat:missingCard'
+                    ? 'bg-blue-50 ring-1 ring-blue-200/80'
+                    : 'hover:bg-gray-100/60'">
+                  <span class="text-gray-800">补卡</span>
+                  <span
+                    class="inline-flex flex-col -space-y-1 opacity-70 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === 'stat:missingCard' && sortOrder === 'asc'
+                        ? 'text-blue-800 opacity-100 scale-125 drop-shadow-[0_0_10px_rgba(37,99,235,0.75)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 5a1 1 0 01.707.293l4 4a1 1 0 11-1.414 1.414L10 7.414 6.707 10.707A1 1 0 115.293 9.293l4-4A1 1 0 0110 5z"
+                        clip-rule="evenodd" />
+                    </svg>
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === 'stat:missingCard' && sortOrder === 'desc'
+                        ? 'text-blue-800 opacity-100 scale-125 drop-shadow-[0_0_10px_rgba(37,99,235,0.75)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 15a1 1 0 01-.707-.293l-4-4a1 1 0 011.414-1.414L10 12.586l3.293-3.293a1 1 0 111.414 1.414l-4 4A1 1 0 0110 15z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </span>
+                </button>
+              </th>
               <th
                 class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center">
-                出差</th>
+                <button type="button" @click="toggleSort('stat:businessTrip')"
+                  class="group inline-flex items-center justify-center gap-1 w-full select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  :class="sortKey === 'stat:businessTrip'
+                    ? 'bg-blue-50 ring-1 ring-blue-200/80'
+                    : 'hover:bg-gray-100/60'">
+                  <span class="text-gray-800">出差</span>
+                  <span
+                    class="inline-flex flex-col -space-y-1 opacity-70 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === 'stat:businessTrip' && sortOrder === 'asc'
+                        ? 'text-blue-800 opacity-100 scale-125 drop-shadow-[0_0_10px_rgba(37,99,235,0.75)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 5a1 1 0 01.707.293l4 4a1 1 0 11-1.414 1.414L10 7.414 6.707 10.707A1 1 0 115.293 9.293l4-4A1 1 0 0110 5z"
+                        clip-rule="evenodd" />
+                    </svg>
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === 'stat:businessTrip' && sortOrder === 'desc'
+                        ? 'text-blue-800 opacity-100 scale-125 drop-shadow-[0_0_10px_rgba(37,99,235,0.75)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 15a1 1 0 01-.707-.293l-4-4a1 1 0 011.414-1.414L10 12.586l3.293-3.293a1 1 0 111.414 1.414l-4 4A1 1 0 0110 15z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </span>
+                </button>
+              </th>
               <th
                 class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center">
-                调休</th>
+                <button type="button" @click="toggleSort('stat:compLeave')"
+                  class="group inline-flex items-center justify-center gap-1 w-full select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  :class="sortKey === 'stat:compLeave'
+                    ? 'bg-blue-50 ring-1 ring-blue-200/80'
+                    : 'hover:bg-gray-100/60'">
+                  <span class="text-gray-800">调休</span>
+                  <span
+                    class="inline-flex flex-col -space-y-1 opacity-70 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === 'stat:compLeave' && sortOrder === 'asc'
+                        ? 'text-blue-800 opacity-100 scale-125 drop-shadow-[0_0_10px_rgba(37,99,235,0.75)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 5a1 1 0 01.707.293l4 4a1 1 0 11-1.414 1.414L10 7.414 6.707 10.707A1 1 0 115.293 9.293l4-4A1 1 0 0110 5z"
+                        clip-rule="evenodd" />
+                    </svg>
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === 'stat:compLeave' && sortOrder === 'desc'
+                        ? 'text-blue-800 opacity-100 scale-125 drop-shadow-[0_0_10px_rgba(37,99,235,0.75)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 15a1 1 0 01-.707-.293l-4-4a1 1 0 011.414-1.414L10 12.586l3.293-3.293a1 1 0 111.414 1.414l-4 4A1 1 0 0110 15z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </span>
+                </button>
+              </th>
               <th
                 class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center">
-                请假</th>
+                <button type="button" @click="toggleSort('stat:leave')"
+                  class="group inline-flex items-center justify-center gap-1 w-full select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  :class="sortKey === 'stat:leave'
+                    ? 'bg-blue-50 ring-1 ring-blue-200/80'
+                    : 'hover:bg-gray-100/60'">
+                  <span class="text-gray-800">请假</span>
+                  <span
+                    class="inline-flex flex-col -space-y-1 opacity-70 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === 'stat:leave' && sortOrder === 'asc'
+                        ? 'text-blue-800 opacity-100 scale-125 drop-shadow-[0_0_10px_rgba(37,99,235,0.75)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 5a1 1 0 01.707.293l4 4a1 1 0 11-1.414 1.414L10 7.414 6.707 10.707A1 1 0 115.293 9.293l4-4A1 1 0 0110 5z"
+                        clip-rule="evenodd" />
+                    </svg>
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === 'stat:leave' && sortOrder === 'desc'
+                        ? 'text-blue-700 opacity-100 scale-110 drop-shadow-[0_0_6px_rgba(37,99,235,0.45)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 15a1 1 0 01-.707-.293l-4-4a1 1 0 011.414-1.414L10 12.586l3.293-3.293a1 1 0 111.414 1.414l-4 4A1 1 0 0110 15z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </span>
+                </button>
+              </th>
               <th
                 class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center">
-                迟到</th>
+                <button type="button" @click="toggleSort('stat:late')"
+                  class="group inline-flex items-center justify-center gap-1 w-full select-none -mx-1 px-1 py-0.5 rounded-md transition-colors duration-200"
+                  :class="sortKey === 'stat:late'
+                    ? 'bg-blue-50 ring-1 ring-blue-200/80'
+                    : 'hover:bg-gray-100/60'">
+                  <span class="text-gray-800">迟到</span>
+                  <span
+                    class="inline-flex flex-col -space-y-1 opacity-70 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === 'stat:late' && sortOrder === 'asc'
+                        ? 'text-blue-700 opacity-100 scale-110 drop-shadow-[0_0_6px_rgba(37,99,235,0.45)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 5a1 1 0 01.707.293l4 4a1 1 0 11-1.414 1.414L10 7.414 6.707 10.707A1 1 0 115.293 9.293l4-4A1 1 0 0110 5z"
+                        clip-rule="evenodd" />
+                    </svg>
+                    <svg class="w-3 h-3 transition-all duration-200"
+                      :class="sortKey === 'stat:late' && sortOrder === 'desc'
+                        ? 'text-blue-700 opacity-100 scale-110 drop-shadow-[0_0_6px_rgba(37,99,235,0.45)]'
+                        : 'text-gray-400 opacity-50'"
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd"
+                        d="M10 15a1 1 0 01-.707-.293l-4-4a1 1 0 011.414-1.414L10 12.586l3.293-3.293a1 1 0 111.414 1.414l-4 4A1 1 0 0110 15z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </span>
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody class="relative">
-            <tr v-for="row in data" :key="row.id" class="group hover:bg-gray-50/50 transition-colors duration-150">
+            <tr v-for="row in sortedData" :key="row.id" class="group hover:bg-gray-50/50 transition-colors duration-150">
               <td
                 class="px-4 py-3 text-[13px] text-gray-900 border-b border-r border-gray-100 whitespace-nowrap font-medium sticky left-0 bg-white group-hover:bg-gray-50 border-r border-gray-200 z-10">
                 {{ row.name }}</td>
@@ -887,9 +1206,13 @@ onUnmounted(() => {
               <td v-for="m in monthKeys" :key="m"
                 class="px-4 py-3 text-[13px] text-gray-700 border-b border-gray-100 whitespace-nowrap text-center">
                 <div v-if="row[currentHoursField][m] !== undefined && row[currentHoursField][m] !== null"
-                  class="py-1 rounded text-[12px]" :class="getCellColor(row[currentHoursField][m], columnValues[m])">{{
+                  class="h-6 px-2 rounded text-[12px] box-border border border-transparent flex items-center justify-center leading-none"
+                  :class="getCellColor(row[currentHoursField][m], columnValues[m])">{{
                     row[currentHoursField][m].toFixed(2) }}</div>
-                <div v-else class="py-1 rounded text-[12px] text-gray-400">-</div>
+                <div v-else
+                  class="h-6 px-2 rounded text-[12px] box-border border border-transparent flex items-center justify-center leading-none text-gray-400">
+                  -
+                </div>
               </td>
               <td class="px-4 py-3 text-[13px] text-gray-700 border-b border-gray-100 whitespace-nowrap text-center">
                 <div v-if="rowAverages[row.id] !== null && rowAverages[row.id] !== undefined"
