@@ -852,21 +852,40 @@ onUnmounted(() => {
 
         <!-- 工时显示模式切换 -->
         <div class="flex items-center h-[34px]">
-          <button @click="showTotalHours = !showTotalHours"
-            class="relative inline-flex items-center justify-between h-[34px] w-[88px] px-1 rounded-lg transition-colors duration-300 focus:outline-none "
-            :class="showTotalHours ? 'bg-violet-500' : 'bg-blue-500'">
-            <span class="absolute left-3 text-[12px] font-medium transition-colors duration-300 z-10"
-              :class="showTotalHours ? 'text-white' : 'text-gray-700/0'">
-              总工时
-            </span>
+          <div
+            class="relative inline-flex items-center justify-between h-[34px] w-[108px] px-1 rounded-full bg-blue-100 "
+            role="tablist"
+            aria-label="工时显示模式">
+            <!-- 滑块（使用蓝色，与查询按钮主色保持一致） -->
             <span
-              class="absolute inline-block h-[26px] w-[26px] bg-white rounded-md shadow-md transform transition-transform duration-300 z-20"
-              :class="showTotalHours ? 'translate-x-[54px]' : 'translate-x-[0px]'" </span>
-              <span class="absolute right-1.5 text-[12px] font-medium transition-colors duration-300 z-10"
-                :class="showTotalHours ? 'text-white/0' : 'text-white'">
-                日均工时
-              </span>
-          </button>
+              class="absolute top-[4px] left-[4px] h-[26px] bg-blue-500 rounded-full shadow-md transition-transform duration-200"
+              :style="{
+                width: 'calc(50% - 8px)',
+                transform: showTotalHours ? 'translateX(0px)' : 'translateX(54px)'
+              }"></span>
+
+            <!-- 选项：总和 -->
+            <button
+              @click="showTotalHours = true"
+              type="button"
+              role="tab"
+              :aria-selected="showTotalHours"
+              class="relative z-10 flex-1 px-3 text-[12px] font-medium text-center transition-colors duration-200 rounded-full"
+              :class="showTotalHours ? 'text-white font-semibold' : 'text-blue-700'">
+              总和
+            </button>
+
+            <!-- 选项：日均 -->
+            <button
+              @click="showTotalHours = false"
+              type="button"
+              role="tab"
+              :aria-selected="!showTotalHours"
+              class="relative z-10 flex-1 px-3 text-[12px] font-medium text-center transition-colors duration-200 rounded-full"
+              :class="!showTotalHours ? 'text-white font-semibold' : 'text-blue-700'">
+              日均
+            </button>
+          </div>
         </div>
       </div>
       <div class="flex items-center gap-3 px-3 h-[34px]">
@@ -1003,7 +1022,6 @@ onUnmounted(() => {
                   </span>
                 </button>
               </th>
-              <!-- 添加一列，把前面月份的工时数据相加后求平均值 -->
               <th
                 class="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50 border-b border-gray-200 text-center min-w-[90px] whitespace-nowrap">
                 <button type="button" @click="toggleSort('avg')"

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, inject, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, inject, onMounted, onUnmounted, watch, nextTick, reactive } from 'vue'
 import IconClock from '../components/icons/IconClock.vue'
 import IconBriefcase from '../components/icons/IconBriefcase.vue'
 import IconCalendar from '../components/icons/IconCalendar.vue'
@@ -87,90 +87,130 @@ const hasYearData = (year) => {
   return loadedYears.value.has(year)
 }
 
-// 获取个人数据（按年份获取）
-const fetchPersonalData = async (year = null) => {
+// 获取个人数据（支持同时加载多个年份）
+const fetchPersonalData = async (years = null) => {
   const employeeId = getEmployeeId()
   if (!employeeId) {
     showToast('未找到员工ID，请先登录', 'error')
     return
   }
 
-  // 如果没有指定年份，使用当前年份
-  const targetYear = year || currentYear.value
+  // 标准化输入：支持单个年份或年份数组
+  const targetYears = Array.isArray(years) ? years : (years ? [years] : [currentYear.value])
 
-  // 如果该年份的数据已加载，则跳过
-  if (hasYearData(targetYear)) {
+  // 过滤出未加载的年份
+  const yearsToLoad = targetYears.filter(year => !hasYearData(year))
+
+  // 如果所有年份都已加载，跳过
+  if (yearsToLoad.length === 0) {
     return
   }
 
-  // 获取该年份的所有月份
-  // 如果 allMonthKeys 中已有该年份的月份，使用这些月份；否则生成该年份的所有月份（1-12月）
-  let yearMonths = allMonthKeys.value.filter(month => month.startsWith(targetYear + '-'))
-  
-  // 如果 allMonthKeys 中没有该年份的月份（首次加载），生成该年份的所有月份
-  if (yearMonths.length === 0) {
-    yearMonths = []
-    for (let month = 1; month <= 12; month++) {
-      const monthStr = month.toString().padStart(2, '0')
-      yearMonths.push(`${targetYear}-${monthStr}`)
-    }
-  }
-
-  // 该年份的第一个月和最后一个月
-  const startMonth = yearMonths[0]
-  const endMonth = yearMonths[yearMonths.length - 1]
-
   loading.value = true
   try {
-    const result = await queryPersonalData({
-      start_month: startMonth,
-      end_month: endMonth,
-      employee_id: employeeId
-    })
-    // 转换数据格式（合并到现有数据中，而不是替换）
-    const newData = transformApiData(result)
+    // 为每个年份生成月份范围
+    const yearRanges = yearsToLoad.map(year => {
+      // 如果 allMonthKeys 中已有该年份的月份，使用这些月份；否则生成该年份的所有月份（1-12月）
+      let yearMonths = allMonthKeys.value.filter(month => month.startsWith(year + '-'))
 
-    // 合并数据：保留其他年份的数据，更新当前年份的数据
-    personalData.value = {
-      monthlyHours: {
-        ...personalData.value.monthlyHours,
-        ...newData.monthlyHours
-      },
-      monthlyTotalHours: {
-        ...personalData.value.monthlyTotalHours,
-        ...newData.monthlyTotalHours
-      },
-      weekendOvertimeHours: {
-        ...personalData.value.weekendOvertimeHours,
-        ...newData.weekendOvertimeHours
-      },
-      stats: {
-        ...personalData.value.stats,
-        ...newData.stats
-      },
-      employee: newData.employee || personalData.value.employee
+      // 如果 allMonthKeys 中没有该年份的月份（首次加载），生成该年份的所有月份
+      if (yearMonths.length === 0) {
+        yearMonths = []
+        for (let month = 1; month <= 12; month++) {
+          const monthStr = month.toString().padStart(2, '0')
+          yearMonths.push(`${year}-${monthStr}`)
+        }
+      }
+
+      return {
+        year,
+        startMonth: yearMonths[0],
+        endMonth: yearMonths[yearMonths.length - 1]
+      }
+    })
+
+    // 按优先级排序：当前年份 -> 前一年 -> 后一年
+    const currentYearNum = currentYear.value
+    yearRanges.sort((a, b) => {
+      const yearA = a.year
+      const yearB = b.year
+
+      // 定义优先级：当前年份优先级最高，其次是前一年，最后是后一年
+      const getPriority = (year) => {
+        if (year === currentYearNum) return 0 // 当前年份优先级最高
+        if (year === currentYearNum - 1) return 1 // 前一年其次
+        if (year === currentYearNum + 1) return 2 // 后一年最后
+        return 3 // 其他年份最低优先级
+      }
+
+      const priorityA = getPriority(yearA)
+      const priorityB = getPriority(yearB)
+
+      // 按优先级排序，如果优先级相同则按年份顺序
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB
+      }
+      return yearA - yearB
+    })
+
+
+
+    // 为每个合并的范围请求数据
+    for (const range of yearRanges) {
+      const result = await queryPersonalData({
+        start_month: range.startMonth,
+        end_month: range.endMonth,
+        employee_id: employeeId
+      })
+
+      // 转换数据格式（合并到现有数据中，而不是替换）
+      const newData = transformApiData(result)
+
+      // 合并数据：保留其他年份的数据，更新当前年份的数据
+      personalData.value = reactive({
+        monthlyHours: {
+          ...personalData.value.monthlyHours,
+          ...newData.monthlyHours
+        },
+        monthlyTotalHours: {
+          ...personalData.value.monthlyTotalHours,
+          ...newData.monthlyTotalHours
+        },
+        weekendOvertimeHours: {
+          ...personalData.value.weekendOvertimeHours,
+          ...newData.weekendOvertimeHours
+        },
+        stats: {
+          ...personalData.value.stats,
+          ...newData.stats
+        },
+        employee: newData.employee || personalData.value.employee
+      })
     }
 
-    // 标记该年份已加载
-    loadedYears.value.add(targetYear)
-    showToast('获取个人工时数据成功', 'success')
+    // 标记所有年份已加载
+    yearsToLoad.forEach(year => loadedYears.value.add(year))
+
+    if (yearsToLoad.length > 0) {
+      showToast(`获取 ${yearsToLoad.length} 个年份的个人工时数据成功`, 'success')
+    }
+
   } catch (error) {
     console.error('获取个人数据失败:', error)
     showToast('获取个人数据失败', 'error')
     // 如果还没有任何数据，初始化空数据
     if (!personalData.value.monthlyHours || Object.keys(personalData.value.monthlyHours).length === 0) {
-      personalData.value = {
+      personalData.value = reactive({
         monthlyHours: {},
         monthlyTotalHours: {},
         weekendOvertimeHours: {},
         stats: {},
         employee: null
-      }
+      })
     }
-    
+
   } finally {
     loading.value = false
-    
   }
 }
 const allMonthKeys = computed(() => {
@@ -221,20 +261,18 @@ const currentYearMonths = computed(() => {
 // 切换年份
 const changeYear = async (direction) => {
   const targetYear = direction === 'prev' ? currentYear.value - 1 : currentYear.value + 1
-  
-  // 如果目标年份的数据未加载，先获取数据
-  if (!hasYearData(targetYear)) {
-    await fetchPersonalData(targetYear)
-  }
-  
+
+  // 同时加载目标年份、上一年和下一年的数据
+  const yearsToLoad = [targetYear - 1, targetYear, targetYear + 1]
+  await fetchPersonalData(yearsToLoad)
+
   // 获取该年份的所有月份
   const targetYearMonths = allMonthKeys.value.filter(month => month.startsWith(targetYear + '-'))
-  
+
   if (targetYearMonths.length > 0) {
     // 保持当前月份号，如果目标年份没有该月份，则选择最接近的月份
     const currentMonthNum = currentMonth.value ? parseInt(currentMonth.value.split('-')[1]) : 1
     let targetMonth = targetYearMonths.find(m => parseInt(m.split('-')[1]) === currentMonthNum)
-
     // 如果目标年份没有对应的月份，选择最接近的月份
     if (!targetMonth) {
       // 优先选择相同或更小的月份号
@@ -513,10 +551,12 @@ watch(allMonthKeys, (newKeys) => {
   }
 }, { immediate: true })
 
-// 监听年份变化，如果切换到新年份且数据未加载，则获取数据
+// 监听年份变化，如果切换到新年份且数据未加载，则获取该年份及相邻年份的数据
 watch(currentYear, async (newYear, oldYear) => {
   if (newYear !== oldYear && !hasYearData(newYear)) {
-    await fetchPersonalData(newYear)
+    // 同时加载新年份、上一年和下一年的数据
+    const yearsToLoad = [newYear - 1, newYear, newYear + 1]
+    await fetchPersonalData(yearsToLoad)
   }
 })
 
@@ -580,8 +620,10 @@ watch(loading, (newLoading) => {
 }, { immediate: true })
 
 onMounted(() => {
-  // 获取当前年份的个人数据
-  fetchPersonalData(currentYear.value)
+  // 获取当前年份、上一年和下一年的个人数据
+  const currentYearNum = currentYear.value
+  const yearsToLoad = [currentYearNum - 1, currentYearNum, currentYearNum + 1]
+  fetchPersonalData(yearsToLoad)
 
   // 稍微延迟触发动画，确保 DOM 渲染完成
   setTimeout(() => {
@@ -619,7 +661,7 @@ onUnmounted(() => {
         </div>
 
         <div class="flex items-center gap-2 z-20">
-          <button @click="changeYear('prev')" :disabled="!canGoPrev"
+          <button @click="changeYear('prev')" :disabled="!canGoPrev""
             class="flex items-center justify-center w-9 h-9 rounded-xl bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-4 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
             :class="canGoPrev ? 'cursor-pointer' : 'cursor-not-allowed'">
             <IconChevronRight class="w-4 h-4 text-gray-600 rotate-180" />
@@ -631,7 +673,7 @@ onUnmounted(() => {
             <span class="text-[13px] font-semibold text-gray-700">{{ currentYear }}年</span>
           </div>
 
-          <button @click="changeYear('next')" :disabled="!canGoNext"
+          <button @click="changeYear('next')" :disabled="!canGoNext""
             class="flex items-center justify-center w-9 h-9 rounded-xl bg-white/70 hover:bg-white/90 border border-gray-200/80 hover:border-blue-300/50 shadow-sm hover:shadow-md transition-all duration-300 outline-none focus:ring-4 focus:ring-blue-500/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/70 disabled:hover:shadow-sm"
             :class="canGoNext ? 'cursor-pointer' : 'cursor-not-allowed'">
             <IconChevronRight class="w-4 h-4 text-gray-600" />
