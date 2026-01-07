@@ -192,7 +192,7 @@ const fetchPersonalData = async (years = null) => {
     yearsToLoad.forEach(year => loadedYears.value.add(year))
 
     if (yearsToLoad.length > 0) {
-      showToast(`获取 ${yearsToLoad.length} 个年份的个人工时数据成功`, 'success')
+      showToast(`个人工时数据成功`, 'success')
     }
 
   } catch (error) {
